@@ -84,6 +84,7 @@
 		export class HistoryManager
 		{
 			animateMs: number = 100;
+			shallAnimate: boolean = true;
 			curHistoryId: number;
 			curShowingHistoryId: number;
 			historyData: any;
@@ -469,15 +470,19 @@
 				}
 				ff.coreMGR.viewControllerMGR.destroyViewControllers($deadViewCtrl);
 
-
-				$deadViewCtrl.classList.add("ff-anim-exit");
-				$deadViewCtrl.appendChild(this.createElementFromHTML("<div class='ff-deadviewctrl-overlay'></div>"));
+				if (this.shallAnimate == true)
+				{
+					$deadViewCtrl.classList.add("ff-anim-exit");
+					$deadViewCtrl.appendChild(this.createElementFromHTML("<div class='ff-deadviewctrl-overlay'></div>"));
+				}
+				else
+					$rcFolder.removeChild($deadViewCtrl);
 				
 				Utility.replaceDeadScriptsWithWorkingScripts($newViewCtrl);
 
-				$newViewCtrl.classList.add("ff-anim-enter");
+				if (this.shallAnimate == true)
+					$newViewCtrl.classList.add("ff-anim-enter");
 				$rcFolder.appendChild($newViewCtrl);
-
 				
 				this.setState(HistoryManager.State.Animating);
 
@@ -491,8 +496,11 @@
 
 				setTimeout(() =>
 				{
-					$newViewCtrl.classList.remove("ff-anim-enter");
-					$rcFolder.removeChild($deadViewCtrl);
+					if (this.shallAnimate == true)
+					{
+						$newViewCtrl.classList.remove("ff-anim-enter");
+						$rcFolder.removeChild($deadViewCtrl);
+					}
 					this.setState(HistoryManager.State.Idle);
 					(<events.IPrivateEventHandler><any>ff.events.onAnimatingDone).eventhandler.fireEvent();
 					HistoryManager.CssUtility.removeUnusuedWebObjectCss();
@@ -503,7 +511,7 @@
 						this.nextActionFuncAfterAnimating = null;
 						return;
 					}
-				}, this.animateMs);
+				}, this.shallAnimate == true ? this.animateMs : 0);
 
 				this.SPAPageChange6_LastCode(httpRequest, rData, $rcFolder, $newViewCtrl);
 			}
@@ -1878,6 +1886,10 @@
 			 */
 			setChangePageAnimMs(ms: number) {
 				ff.coreMGR.historyMGR.animateMs = ms;
+			}
+			setChangePageShallAnimate(shallAnimate: boolean)
+			{
+				ff.coreMGR.historyMGR.shallAnimate = shallAnimate;
 			}
 		}
 	}
