@@ -24,7 +24,7 @@ namespace Formula.Processing
 			context.SetTypeRef(app);
 			if (app.ShallDraw)
 			{
-				string appDir = PathHelper.GetAppDir();
+				string appDir = FormulaPathHelper.GetAppDir();
 				context.AddScriptsFromDir(appDir, app.GetType().GetCustomAttribute<NonFatalJsAttribute>()?.JsFiles, true);
 			}
 			#endregion
@@ -37,7 +37,7 @@ namespace Formula.Processing
 			context.Layout = layoutViewCtrl;
 			if (layoutViewCtrl.ShallDraw)
 			{
-				string layoutDir = PathHelper.GetLayoutDir(layoutViewCtrl.GetType());
+				string layoutDir = FormulaPathHelper.GetLayoutDir(layoutViewCtrl.GetType());
 				context.AddScriptsFromDir(layoutDir, layoutViewCtrl.GetType()
 					.GetCustomAttribute<NonFatalJsAttribute>()?.JsFiles, true);
 			}
@@ -65,7 +65,7 @@ namespace Formula.Processing
 
 				if(pageViewCtrl.ShallDraw)
 				{ 
-					string pageDir = PathHelper.GetPageDir(pageViewCtrl.GetType());
+					string pageDir = FormulaPathHelper.GetPageDir(pageViewCtrl.GetType());
 					context.AddScriptsFromDir(pageDir, pageViewCtrl.GetType()
 						.GetCustomAttribute<NonFatalJsAttribute>()?.JsFiles, false);
 					//context.AddStylesFromDir(pageDir);
@@ -132,7 +132,7 @@ namespace Formula.Processing
 					//Eg: "menus.TopMenu"
 
 					string dir = "webobjects/" + string.Join('/', drawingWebObject.Split('.'));
-					Type webobjectType = PathHelper.GetTypeByWebObjectName(drawingWebObject);
+					Type webobjectType = FormulaPathHelper.GetTypeByWebObjectName(drawingWebObject);
 					context.AddScriptsFromDir(dir, webobjectType?.GetCustomAttribute<NonFatalJsAttribute>()?.JsFiles, false);
 					if (context.IsFirstPageLoad == false && context.DrawnWebObjects.Contains(drawingWebObject) == false)
 						context.AddWebObjectStylesFromDir(dir, drawingWebObject);
@@ -190,10 +190,10 @@ namespace Formula.Processing
 				return true;
 			//This page is the first to be drawn
 			//So now set an ffFolder
-			if (PathHelper.IsTypeALayout(parentLayoutOrPage) == true)
+			if (FormulaPathHelper.IsTypeALayout(parentLayoutOrPage) == true)
 				context.SetTargetFfFolder(FfFolderType.Layout, null);
 			else
-				context.SetTargetFfFolder(FfFolderType.Page, PathHelper.PageName(parentLayoutOrPage));
+				context.SetTargetFfFolder(FfFolderType.Page, FormulaPathHelper.PageName(parentLayoutOrPage));
 			return true;
 		}
 

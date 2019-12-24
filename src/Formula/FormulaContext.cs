@@ -28,11 +28,11 @@ namespace Formula
 		{
 			if (this.DrawnClientPages == null) //Null if first-page-load
 				return false;
-			return this.DrawnClientPages.Contains(PathHelper.PageName(pageType));
+			return this.DrawnClientPages.Contains(FormulaPathHelper.PageName(pageType));
 		}
 		internal bool IsClientLayoutDrawn(Type layoutType)
 		{
-			return this.DrawnClientLayout == PathHelper.LayoutName(layoutType);
+			return this.DrawnClientLayout == FormulaPathHelper.LayoutName(layoutType);
 		}
 		internal void SetTargetFfFolder(FfFolderType folderType, string rcTargetFolderPageName)
 		{
@@ -67,9 +67,9 @@ namespace Formula
 
 		internal List<ScriptItem> Scripts = new List<ScriptItem>();
 		internal List<string> WebObjectStyles = new List<string>();
-		internal void AddScriptsFromDir(string dir, string[] nonFatalFiles, bool includeSubDir)
+		internal void AddScriptsFromDir(string dirWithoutWwwroot, string[] nonFatalFiles, bool includeSubDir)
 		{
-			List<ScriptItem> scriptItems = ScriptItem.GetScriptItemsFromDir(dir, nonFatalFiles, includeSubDir);
+			List<ScriptItem> scriptItems = ScriptItem.GetScriptItemsFromDir(dirWithoutWwwroot, nonFatalFiles, includeSubDir);
 			this.Scripts.AddRange(scriptItems);
 		}
 		internal void AddWebObjectStylesFromDir(string dir, string webobjectName)
@@ -124,35 +124,37 @@ namespace Formula
 	{
 		public string Path;
 		public bool IsFatal;
-
-		internal static ConcurrentDictionary<string, List<ScriptItem>> CachedScriptItems = new ConcurrentDictionary<string, List<ScriptItem>>();
-		internal static List<ScriptItem> GetScriptItemsFromDir(string dir, string[] nonFatalFiles, bool includeSubDir)
+		static readonly string _systemWwwrootDir = $"{System.IO.Path.DirectorySeparatorChar}wwwroot";
+		internal static ConcurrentDictionary<string, List<ScriptItem>> CachedScriptItemsExcludeSubDir = new ConcurrentDictionary<string, List<ScriptItem>>();
+		internal static ConcurrentDictionary<string, List<ScriptItem>> CachedScriptItemsIncludeSubdir = new ConcurrentDictionary<string, List<ScriptItem>>();
+		internal static List<ScriptItem> GetScriptItemsFromDir(string dirWithoutWwwroot, string[] nonFatalFiles, bool includeSubDir)
 		{
-			dir = dir.ToLowerInvariant();
+			string systemDirWithoutWwwroot = PathHelper.ToSystemPath(dirWithoutWwwroot);
+			var cachedScriptItemsDirTarget = includeSubDir ? CachedScriptItemsIncludeSubdir : CachedScriptItemsExcludeSubDir;
 
-			if(FormulaConfig.CacheJsAndCss == true && CachedScriptItems.ContainsKey(dir))
-				return CachedScriptItems[dir];
+			if (FormulaConfig.CacheJsAndCss && cachedScriptItemsDirTarget.ContainsKey(systemDirWithoutWwwroot))
+				return cachedScriptItemsDirTarget[systemDirWithoutWwwroot];
 			List<ScriptItem> scriptItems = new List<ScriptItem>();
 
-			string dir2 = System.IO.Path.Combine("wwwroot", dir.Trim('/', '\\'));
-			var jsFiles = FileHelper.GetFilesInDirectory(dir2, "js", includeSubDir);
+			string systemDirWithWwwroot = $"{_systemWwwrootDir}{systemDirWithoutWwwroot}";
+			var jsSystemFilesWithWwwroot = FileHelper.GetFilesInDirectory(systemDirWithWwwroot, "js", includeSubDir);
 
-			foreach (string jsFile in jsFiles)
+			foreach (string jsSystemFileWithWwwroot in jsSystemFilesWithWwwroot)
 			{
 				var scriptItem = new ScriptItem();
-				string lastWriteTime = File.GetLastWriteTimeUtc(jsFile).Ticks.ToString();
+				string lastWriteTime = File.GetLastWriteTimeUtc(jsSystemFileWithWwwroot).Ticks.ToString();
 				var fileVersion = System.Convert.ToBase64String(Encoding.ASCII.GetBytes(lastWriteTime));
 
-				string jsFilePath = string.Join('/', jsFile.Substring(8).Split('\\', StringSplitOptions.RemoveEmptyEntries));
-				jsFilePath = $"/{jsFilePath}?v={fileVersion}".ToLowerInvariant();
-				scriptItem.Path = jsFilePath;
-				var fileNameWithoutExt = Helpers.MiscHelper.GetFileNameWithoutExt(jsFile);
+				string jsUrlFilePath = PathHelper.ToUrlPath(jsSystemFileWithWwwroot.Substring(_systemWwwrootDir.Length));
+				jsUrlFilePath = $"{jsUrlFilePath}?v={fileVersion}";
+				scriptItem.Path = jsUrlFilePath;
+				var fileNameWithoutExt = Helpers.MiscHelper.GetFileNameWithoutExt(jsSystemFileWithWwwroot);
 				scriptItem.IsFatal = nonFatalFiles == null || nonFatalFiles.Contains(fileNameWithoutExt) == false;
 				scriptItems.Add(scriptItem);
 			}
 
 			if (FormulaConfig.CacheJsAndCss)
-				CachedScriptItems.TryAdd(dir, scriptItems);
+				cachedScriptItemsDirTarget.TryAdd(systemDirWithoutWwwroot, scriptItems);
 			return scriptItems;
 		}
 

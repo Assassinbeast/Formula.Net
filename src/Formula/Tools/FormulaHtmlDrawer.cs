@@ -15,11 +15,11 @@ namespace Formula.Tools
 			if (app.ShallDraw)
 				draws.Add((app.GetType(), ProcessApp(app, await render.RenderAsync("app/app", app))));
 			if (layout.ShallDraw)
-				draws.Add((layout.GetType(), ProcessLayout(layout.GetType(), await render.RenderAsync(PathHelper.View(layout.GetType()), layout))));
+				draws.Add((layout.GetType(), ProcessLayout(layout.GetType(), await render.RenderAsync(FormulaPathHelper.View(layout.GetType()), layout))));
 			foreach (var page in pages)
 			{ 
 				if (page.ShallDraw)
-					draws.Add((page.GetType(), ProcessPage(page.GetType(), await render.RenderAsync(PathHelper.View(page.GetType()), page))));
+					draws.Add((page.GetType(), ProcessPage(page.GetType(), await render.RenderAsync(FormulaPathHelper.View(page.GetType()), page))));
 			}
 
 			var doc = new HtmlDocument();
@@ -58,7 +58,7 @@ namespace Formula.Tools
 				head.AppendChild(HtmlNode.CreateNode(styleString));
 
 			HtmlNode ffApp = doc.DocumentNode.SelectSingleNode("//ff-app");
-			string appDir = PathHelper.GetAppDir();
+			string appDir = FormulaPathHelper.GetAppDir();
 
 			styleStrings = StyleTool.GetStyleElementStrings(appDir, true);
 			foreach (string styleString in styleStrings)
@@ -68,24 +68,24 @@ namespace Formula.Tools
 		}
 		static string ProcessLayout(Type layoutType, string layoutHtml)
 		{
-			string layoutDir = PathHelper.GetLayoutDir(layoutType); //TODO: styles are cachable
+			string layoutDir = FormulaPathHelper.GetLayoutDir(layoutType);
 
 			List<string> styleStrings = StyleTool.GetStyleElementStrings(layoutDir, true);
 			StringBuilder sb = new StringBuilder();
 			foreach (string styleString in styleStrings)
 				sb.Append(styleString);
 
-			return $"<ff-layout ff-name='{PathHelper.LayoutName(layoutType)}'>{sb.ToString()}{layoutHtml}</ff-layout>";
+			return $"<ff-layout ff-name='{FormulaPathHelper.LayoutName(layoutType)}'>{sb.ToString()}{layoutHtml}</ff-layout>";
 		}
 		static string ProcessPage(Type pageType, string layoutHtml)
 		{
-			string pageDir = PathHelper.GetPageDir(pageType); //TODO: styles are cachable
+			string pageDir = FormulaPathHelper.GetPageDir(pageType);
 			List<string> styleStrings = StyleTool.GetStyleElementStrings(pageDir, false);
 			StringBuilder sb = new StringBuilder();
 			foreach (string style in styleStrings)
 				sb.Append(style);
 
-			return $"<ff-page ff-name='{PathHelper.PageName(pageType)}'>{sb.ToString()}{layoutHtml}</ff-page>";
+			return $"<ff-page ff-name='{FormulaPathHelper.PageName(pageType)}'>{sb.ToString()}{layoutHtml}</ff-page>";
 		}
 		public static void InsertWebObjectStyles(HtmlNode webobjectStyleDiv, HashSet<string> webObjectNames)
 		{

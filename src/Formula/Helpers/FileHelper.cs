@@ -22,14 +22,14 @@ namespace Formula.Helpers
 					 x.Name == Path.GetFileName(filePath));
 		}
 
-		public static List<string> GetFilesInDirectory(string directory, string extension, bool includeSubDir)
+		public static List<string> GetFilesInDirectory(string systemDir, string extension, bool includeSubDir)
 		{
 			List<string> files = new List<string>();
-			files.AddRange(_GetFilesInDirectory(directory, extension));
-			if (includeSubDir != true) 
+			files.AddRange(_GetFilesInDirectory(systemDir, extension));
+			if (includeSubDir == false) 
 				return files;
 
-			var subDirs = GetDirectoriesInDirectory(directory);
+			var subDirs = GetDirectoriesInDirectory(systemDir);
 			foreach (string subDir in subDirs)
 				files.AddRange(GetFilesInDirectory(subDir, extension, includeSubDir));
 			return files;
@@ -37,23 +37,23 @@ namespace Formula.Helpers
 
 		private static IEnumerable<string> _GetFilesInDirectory(string directory, string extension)
 		{
-			//directory can be eg wwwroot/hello
+			//directory can be eg \wwwroot\hello
 			var files = FileProvider.GetDirectoryContents(directory)
 				.Where(x => x.Exists && !x.IsDirectory && 
 				(string.IsNullOrWhiteSpace(extension) || x.Name.EndsWith("." + extension)))
 				.Select(x => Path.Combine(directory, x.Name)); 
 
-			return files; //["wwwroot/hello/foo.js", "wwwroot/hello/bar.js"]
+			return files; //["\wwwroot\hello\foo.js", "\wwwroot\hello\bar.js"]
 		}
 
 		public static IEnumerable<string> GetDirectoriesInDirectory(string parentDir)
 		{
-			//directory must be eg wwwroot/hello
+			//directory must be eg \wwwroot\hello
 			var directories = FileProvider.GetDirectoryContents(parentDir)
 				.Where(x => x.Exists && x.IsDirectory)
 				.Select(x => Path.Combine(parentDir, x.Name));
 
-			return directories; //["wwwroot/hello/menus", "wwwroot/hello/smileys"]
+			return directories; //["\wwwroot\hello\menus", "\wwwroot\hello\smileys"]
 		}
 	}
 }

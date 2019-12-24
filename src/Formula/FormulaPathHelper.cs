@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace Formula
 {
-	internal static class PathHelper
+	internal static class FormulaPathHelper
     {
 		/// <summary>
 		/// FullName: "Contoso.Pages.Account.Settings.SettingsPage"

@@ -38,33 +38,34 @@ namespace Formula.Utility
 	        };
         }
 
+        static readonly string _wwwrootDir = $"{Path.DirectorySeparatorChar}wwwroot";
         static List<PolyfillItem> GetPolyfillItems(string folderName)
         {
-            var rootPolyfillFolder = Path.Combine("wwwroot", "formula", "polyfills", folderName);
-            var polyfillItemDirsFullPath = FileHelper.GetDirectoriesInDirectory(rootPolyfillFolder);
+            var rootPolyfillSystemDirWithWwwroot = $"{Path.DirectorySeparatorChar}{Path.Combine("wwwroot", "formula", "polyfills", folderName)}";
+            var polyfillItemSystemDirsWithWwwroot = FileHelper.GetDirectoriesInDirectory(rootPolyfillSystemDirWithWwwroot);
             var polyfills = new List<PolyfillItem>();
             var polyfillItemCorrectDirNames = GetCorrectCasingDirNamesInDirectory_LowerCase_CorrectCase_Dic(
-                Path.Combine("formula", "polyfills", folderName));
-            foreach (string dir in polyfillItemDirsFullPath)
+                $"{Path.DirectorySeparatorChar}{Path.Combine("formula", "polyfills", folderName)}");
+            foreach (string polyfillItemSystemDirWithWwwroot in polyfillItemSystemDirsWithWwwroot)
             {
-                string sourceFolder = Path.Combine(dir.Split('/', '\\').Skip(1).ToArray());
-                var dirName = FileHelper.FileProvider.GetFileInfo(sourceFolder).Name;
-                var files = FileHelper.GetFilesInDirectory(dir, "js", true);
-                for (int i = 0; i < files.Count; i++)
-                    files[i] = $"/{string.Join('/', files[i].Split('/', '\\').Skip(1)).TrimStart('/')}";
-                if (polyfillItemCorrectDirNames.ContainsKey(dirName))
-                    polyfills.Add(new PolyfillItem(polyfillItemCorrectDirNames[dirName], files));
+                string polyfillItemSystemDirWithoutWwwroot = polyfillItemSystemDirWithWwwroot.Substring(_wwwrootDir.Length);
+                var polyfillItemDirName = FileHelper.FileProvider.GetFileInfo(polyfillItemSystemDirWithoutWwwroot).Name.ToLowerInvariant();
+                var systemFilesWithWwwroot = FileHelper.GetFilesInDirectory(polyfillItemSystemDirWithWwwroot, "js", true);
+                var urlFilesWithoutWwwroot = systemFilesWithWwwroot.Select(
+                    x=> PathHelper.ToUrlPath(x.Substring(_wwwrootDir.Length))).ToList();
+                if (polyfillItemCorrectDirNames.ContainsKey(polyfillItemDirName))
+                    polyfills.Add(new PolyfillItem(polyfillItemCorrectDirNames[polyfillItemDirName], urlFilesWithoutWwwroot));
             }
             return polyfills;
         }
 
-        static Dictionary<string, string> GetCorrectCasingDirNamesInDirectory_LowerCase_CorrectCase_Dic(string dirPath)
+        static Dictionary<string, string> GetCorrectCasingDirNamesInDirectory_LowerCase_CorrectCase_Dic(string systemDir)
         {
-            var dirs = FileHelper.GetDirectoriesInDirectory(dirPath);
+            var systemChildDirs = FileHelper.GetDirectoriesInDirectory(systemDir);
             var lowerCaseCorrectCaseDic = new Dictionary<string, string>();
-            foreach (var dir in dirs)
+            foreach (var systemChildDir in systemChildDirs)
             {
-                var dirName = FileHelper.FileProvider.GetFileInfo(dir).Name;
+                var dirName = FileHelper.FileProvider.GetFileInfo(systemChildDir).Name;
                 lowerCaseCorrectCaseDic.Add(dirName.ToLowerInvariant(), dirName);
             }
             return lowerCaseCorrectCaseDic;

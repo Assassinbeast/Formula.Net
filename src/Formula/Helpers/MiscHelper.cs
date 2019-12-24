@@ -15,9 +15,8 @@ namespace Formula.Helpers
 		}
 		public static string GetFileNameWithoutExt(string filePath)
 		{
-			//Get hello/foo.js
-			var pathItems = filePath.Replace('\\', '/').Split('/');
-			return pathItems[pathItems.Length - 1].Split('.')[0];
+			var pathItems = filePath.Split('/', '\\');
+			return pathItems[^1].Split('.')[0];
 		}
     }
 }

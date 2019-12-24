@@ -8,66 +8,54 @@ namespace Formula.Tools
 {
     public static class StyleTool
     {
-		static ConcurrentDictionary<string, List<string>> CachedStyleStrings =
-			new ConcurrentDictionary<string, List<string>>();
-		internal static List<string> GetStyleElementStrings(string dir, bool includeSubDir, string webobjectName = null)
+		static readonly ConcurrentDictionary<string, List<string>> _cachedStyleStringsExcludeSubDir = new ConcurrentDictionary<string, List<string>>();
+		static readonly ConcurrentDictionary<string, List<string>> _cachedStyleStringsIncludeSubDir = new ConcurrentDictionary<string, List<string>>();
+		static readonly string _wwwrootDirectory = $"{Path.DirectorySeparatorChar}wwwroot";
+		internal static List<string> GetStyleElementStrings(string dirWithoutWwwroot, bool includeSubDir, string webobjectName = null)
 		{
-			dir = dir.ToLowerInvariant();
+			string systemDirWithoutWwwroot = PathHelper.ToSystemPath(dirWithoutWwwroot);
+			var targetStyleDic = includeSubDir ? _cachedStyleStringsIncludeSubDir : _cachedStyleStringsExcludeSubDir;
 
-			if (FormulaConfig.CacheJsAndCss == true && CachedStyleStrings.ContainsKey(dir))
-				return CachedStyleStrings[dir];
+			if (FormulaConfig.CacheJsAndCss && targetStyleDic.ContainsKey(systemDirWithoutWwwroot))
+				return targetStyleDic[systemDirWithoutWwwroot];
 
 			List<string> styleElementStrings = new List<string>();
-			string dir2 = Path.Combine("wwwroot", dir.Trim('/', '\\'));
+			string systemDirWithWwwroot = $"{_wwwrootDirectory}{systemDirWithoutWwwroot}";
+			var cssSystemPathsWithWwwroot = FileHelper.GetFilesInDirectory(systemDirWithWwwroot, "css", includeSubDir);
 
-			var cssFiles = FileHelper.GetFilesInDirectory(dir2, "css", includeSubDir);
-
-			foreach (string cssFile in cssFiles)
+			foreach (string cssSystemPathWithWwwroot in cssSystemPathsWithWwwroot)
 			{
-				//substring 8 to delete the "wwwroot/"
-				string filePath = cssFile.Substring(8);
-				string styleString = DrawStyle(filePath, webobjectName);
-				if (string.IsNullOrWhiteSpace(styleString) == false)
-					styleElementStrings.Add(styleString);
+				string htmlStyleValue = GetHtmlStyleValue(cssSystemPathWithWwwroot, webobjectName);
+				if (string.IsNullOrWhiteSpace(htmlStyleValue) == false)
+					styleElementStrings.Add(htmlStyleValue);
 			}
 
 			if (FormulaConfig.CacheJsAndCss)
-				CachedStyleStrings.TryAdd(dir, styleElementStrings);
+				targetStyleDic.TryAdd(systemDirWithWwwroot, styleElementStrings);
 			return styleElementStrings;
 		}
 
-		static ConcurrentDictionary<string, string> cachedDrawedStyles = new ConcurrentDictionary<string, string>();
-		static string GetStyleStringFromFile(string path)
+		static string GetStyleStringFromFile(string systemPathWithWwwroot)
 		{
-			string backendFilePath = Path.Combine("wwwroot", path.Trim('/', '\\'));
-			
-			IFileInfo cssFile = FileHelper.GetFileInfo(backendFilePath);
+			IFileInfo cssFile = FileHelper.GetFileInfo(systemPathWithWwwroot);
 			if (cssFile == null)
 				return null;
 
-			using(var stream = cssFile.CreateReadStream())
-			using (var streamReader = new StreamReader(stream))
-			{
-				return streamReader.ReadToEnd();
-			}
+			using var stream = cssFile.CreateReadStream();
+			using var streamReader = new StreamReader(stream);
+			return streamReader.ReadToEnd();
 		}
-		static string DrawStyle(string path, string webobjectName = null)
+		static string GetHtmlStyleValue(string systemPathWithWwwroot, string webobjectName = null)
 		{
-			if (FormulaConfig.CacheJsAndCss == true && cachedDrawedStyles.ContainsKey(path))
-				return cachedDrawedStyles[path];
-
-			string css = GetStyleStringFromFile(path);
+			string css = GetStyleStringFromFile(systemPathWithWwwroot);
 			string drawedStyle = null;
+			string urlPath = PathHelper.ToUrlPath(systemPathWithWwwroot.Substring(_wwwrootDirectory.Length));
 			if(string.IsNullOrWhiteSpace(css) == false)
 			{
-				if (string.IsNullOrWhiteSpace(webobjectName) == true)
-					drawedStyle = $"<style data-path='{path}'>{ css }</style>";
-				else
-					drawedStyle = $"<style data-path='{path}' data-webobject-name='{webobjectName}'>{ css }</style>";
+				drawedStyle = string.IsNullOrWhiteSpace(webobjectName) ? 
+					$"<style data-path='{urlPath}'>{ css }</style>" : 
+					$"<style data-path='{urlPath}' data-webobject-name='{webobjectName}'>{ css }</style>";
 			}
-
-			if (FormulaConfig.CacheJsAndCss)
-				cachedDrawedStyles.TryAdd(path, drawedStyle);
 			return drawedStyle;
 		}
 	}
