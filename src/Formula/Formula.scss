@@ -1,0 +1,119 @@
+﻿//If you edit this, then you must call th.config.setChangePageAnimMs(...);
+$animateMs: 100ms;
+
+ff-app, ff-page, ff-layout, ff-folder {
+	display: block;
+	position: relative;
+	box-sizing: border-box;
+	width: 100%;
+	height: 100%;
+	background-color: white;
+}
+
+ff-page {
+	padding-top: 1px;
+	padding-bottom: 1px;
+}
+
+/*ff-app::before, ff-layout::before, ff-page::before, ff-folder::before
+{
+	content: "";
+	display: block;
+	height: 1px;
+	margin-bottom: -1px;
+	pointer-events: none;
+}
+
+ff-app::after, ff-layout::after, ff-page::after, ff-folder::after
+{
+	content: "";
+	display: block;
+	height: 1px;
+	margin-top: -1px;
+	pointer-events: none;
+}*/
+
+
+#ff-exception {
+	display: none;
+	position: fixed;
+	z-index: 99999;
+	background-color: rgba(0, 0, 0, 0.8);
+	left: 0px;
+	top: 0px;
+	width: 100%;
+	height: 100%;
+	overflow: scroll;
+	padding: 10px;
+
+	p, span, td {
+		color: white;
+	}
+
+	td {
+		vertical-align: top;
+		padding-top: 5px;
+		padding-bottom: 5px;
+	}
+
+	td:first-child {
+		padding-right: 10px;
+	}
+
+	.ff-exception-redtext {
+		color: red;
+	}
+
+	button {
+		background-color: transparent;
+		color: white;
+		border: 2px solid white;
+		border-radius: 5px;
+		padding: 5px;
+	}
+
+	button:hover {
+		cursor: pointer;
+	}
+}
+
+@keyframes ff-anim-exit {
+	0% {
+		top: 0;
+		opacity: 1;
+	}
+
+	100% {
+		top: 0px;
+		opacity: 1;
+	}
+}
+
+@keyframes ff-anim-enter {
+	0% {
+		top: 0px;
+		opacity: 0;
+	}
+
+	100% {
+		top: 0px;
+		opacity: 1;
+	}
+}
+
+.ff-anim-exit {
+	position: absolute;
+	animation: ff-anim-exit $animateMs forwards;
+}
+.ff-anim-enter {
+	animation: ff-anim-enter $animateMs forwards;
+}
+
+.ff-deadviewctrl-overlay {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	/*background-color: rgba(0,0,0,0.5);*/
+}
