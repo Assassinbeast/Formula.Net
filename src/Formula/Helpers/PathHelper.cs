@@ -10,7 +10,7 @@ namespace Formula.Helpers
     public static class PathHelper
     {
         /// <summary>
-        /// Returns a string that starts with PathSeperator. Eg: "\"
+        /// Returns absoulute path that starts with Path.DirectorySeperatorChar. Eg "\"
         /// </summary>
         public static string ToSystemPath(string path)
         {
@@ -19,6 +19,11 @@ namespace Formula.Helpers
             path = $"{Path.DirectorySeparatorChar}{path}";
             return path;
         }
+        /// <summary>
+        /// Returns absolute url that starts with "/"
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
         public static string ToUrlPath(string path)
         {
             path = path.ToLowerInvariant();
