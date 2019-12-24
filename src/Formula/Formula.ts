@@ -499,6 +499,7 @@
 					if (this.shallAnimate == true)
 					{
 						$newViewCtrl.classList.remove("ff-anim-enter");
+						console.log($deadViewCtrl);
 						$rcFolder.removeChild($deadViewCtrl);
 					}
 					this.setState(HistoryManager.State.Idle);
@@ -1186,11 +1187,17 @@
 			destroyViewControllers($deadViewCtrl: HTMLElement)
 			{
 				var $viewCtrls: HTMLElement[] = [$deadViewCtrl];
-				var childControllers: NodeListOf<HTMLElement> = <any>$deadViewCtrl.querySelectorAll("ff-layout, ff-page");
-				for (var i = 0; i < childControllers.length; i++)
-					$viewCtrls.push(childControllers.item(i));
+				var $childControllers: NodeListOf<HTMLElement> = <any>$deadViewCtrl.querySelectorAll("ff-layout, ff-page");
+				for (var i = 0; i < $childControllers.length; i++)
+					$viewCtrls.push($childControllers.item(i));
 				for (var i = $viewCtrls.length - 1; i >= 0; i--)
 				{
+					var $viewCtrl = $viewCtrls[i];
+					if ($viewCtrl.tagName == "FF-LAYOUT")
+						this.$layout = null;
+					else
+						delete this.$pages[$viewCtrl.getAttribute("ff-name")];
+
 					var viewCtrl: ViewController = $viewCtrls[i]["ff-ref"];
 					if (viewCtrl == null)
 						continue;
