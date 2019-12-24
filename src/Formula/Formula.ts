@@ -499,7 +499,6 @@
 					if (this.shallAnimate == true)
 					{
 						$newViewCtrl.classList.remove("ff-anim-enter");
-						console.log($deadViewCtrl);
 						$rcFolder.removeChild($deadViewCtrl);
 					}
 					this.setState(HistoryManager.State.Idle);
