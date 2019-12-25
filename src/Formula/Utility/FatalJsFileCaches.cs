@@ -16,7 +16,8 @@ namespace Formula.Utility
             if (FormulaConfig.CacheJsAndCss && _viewControllerNonFatalJsFilesDic.ContainsKey(type))
                 return _viewControllerNonFatalJsFilesDic[type];
 
-            var jsFiles = type.GetCustomAttribute<NonFatalJsAttribute>()?.JsFiles;
+            var jsFiles = type.GetCustomAttribute<NonFatalJsAttribute>()?.JsFiles ?? new string[]{};
+
             for (int i = 0; i < jsFiles.Length; i++)
 	            jsFiles[i] = jsFiles[i].ToLowerInvariant();
 
