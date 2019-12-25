@@ -1,0 +1,7 @@
+{
+  "disableCompileOnSave": true,
+  "compilerOptions": {
+    "target": "ES5"
+  }
+}
+
