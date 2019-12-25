@@ -11,6 +11,7 @@ var rimraf = require('rimraf');
 var chalk = require("chalk");
 var browserSync = require('browser-sync').create();
 var gulpif = require('gulp-if');
+var btoa = require("btoa");
 
 //ts
 var ts = require('gulp-typescript');
@@ -234,8 +235,9 @@ function compileSass(filePath) {
         .pipe(cssAutoPrefixer({grid: "autoplace"}))
         .pipe(minifyCSS())
         .pipe(sourcemaps.write("./", {
-            sourceRoot: "./", sourceMappingURL: function (file) {
-                return "/" + dirPath + "/" + file.sourceMap.file + ".map";
+            sourceRoot: "./", sourceMappingURL: function (file)
+            {
+                return "/" + dirPath + "/" + file.sourceMap.file + ".map" + "?v=" + btoa(Date.now().toString());
             }
         }))
         .pipe(gulp.dest(dest));
@@ -273,7 +275,7 @@ function compileTypescript(filePath) {
         .pipe(sourcemaps.write("./", {
             sourceRoot: "./", sourceMappingURL: function (file)
             {
-                return "/" + dirPath + "/" + file.sourceMap.file + ".map";
+                return "/" + dirPath + "/" + file.sourceMap.file + ".map" + "?v=" + btoa(Date.now().toString());
             }
         }))
         .pipe(gulp.dest(dest));
