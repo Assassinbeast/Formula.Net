@@ -52,7 +52,13 @@ namespace Formula.Utility
                 var polyfillItemDirName = FileHelper.FileProvider.GetFileInfo(polyfillItemSystemDirWithoutWwwroot).Name.ToLowerInvariant();
                 var systemFilesWithWwwroot = FileHelper.GetFilesInDirectory(polyfillItemSystemDirWithWwwroot, "js", true);
                 var urlFilesWithoutWwwroot = systemFilesWithWwwroot.Select(
-                    x=> PathHelper.ToUrlPath(x.Substring(_wwwrootDir.Length))).ToList();
+                    systemFileWithWwwroot=>
+                    {
+                        var fileVersion = FileHelper.GetFileVersion(systemFileWithWwwroot);
+                        var urlFileWithoutWwwroot = PathHelper.ToUrlPath(systemFileWithWwwroot.Substring(_wwwrootDir.Length));
+                        return $"{urlFileWithoutWwwroot}?v={fileVersion}";
+                    })
+                    .ToList();
                 if (polyfillItemCorrectDirNames.ContainsKey(polyfillItemDirName))
                     polyfills.Add(new PolyfillItem(polyfillItemCorrectDirNames[polyfillItemDirName], urlFilesWithoutWwwroot));
             }

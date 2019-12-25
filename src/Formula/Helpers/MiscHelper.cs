@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Linq;
 
 namespace Formula.Helpers
 {
@@ -13,10 +14,12 @@ namespace Formula.Helpers
 		{
 			return JsonConvert.DeserializeObject<T>(json, EngineItems.JsonSettings);
 		}
-		public static string GetFileNameWithoutExt(string filePath)
+		public static string GetFileNameWithoutExtension(string filePath)
 		{
-			var pathItems = filePath.Split('/', '\\');
-			return pathItems[^1].Split('.')[0];
+			var pathItems = filePath.Split('/', '\\'); // ["wwwroot", "foo", "hello.js.map"]
+			var targetItem = pathItems[^1]; // hello.js.map
+			var targetItemItems = targetItem.Split('.'); // ["hello", "js", "map"]
+			return string.Join('.', targetItemItems.Take(targetItemItems.Length - 1));
 		}
     }
 }

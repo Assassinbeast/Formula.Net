@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Microsoft.Extensions.FileProviders;
 
 namespace Formula.Helpers
@@ -54,6 +55,12 @@ namespace Formula.Helpers
 				.Select(x => Path.Combine(parentDir, x.Name));
 
 			return directories; //["\wwwroot\hello\menus", "\wwwroot\hello\smileys"]
+		}
+
+		public static string GetFileVersion(string systemPath)
+		{
+			string lastWriteTime = FileProvider.GetFileInfo(systemPath).LastModified.Ticks.ToString();
+			return System.Convert.ToBase64String(Encoding.ASCII.GetBytes(lastWriteTime));
 		}
 	}
 }

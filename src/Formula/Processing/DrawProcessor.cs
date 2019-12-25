@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Formula.Helpers;
 using Formula.LogicActions;
 using Formula.Tools;
+using Formula.Utility;
 using HtmlAgilityPack;
 
 namespace Formula.Processing
@@ -25,7 +26,7 @@ namespace Formula.Processing
 			if (app.ShallDraw)
 			{
 				string appDir = FormulaPathHelper.GetAppDir();
-				context.AddScriptsFromDir(appDir, app.GetType().GetCustomAttribute<NonFatalJsAttribute>()?.JsFiles, true);
+				context.AddScriptsFromDir(appDir, FatalJsFileCaches.GetNonFatalJsFiles(app.GetType()), true);
 			}
 			#endregion
 
@@ -38,8 +39,7 @@ namespace Formula.Processing
 			if (layoutViewCtrl.ShallDraw)
 			{
 				string layoutDir = FormulaPathHelper.GetLayoutDir(layoutViewCtrl.GetType());
-				context.AddScriptsFromDir(layoutDir, layoutViewCtrl.GetType()
-					.GetCustomAttribute<NonFatalJsAttribute>()?.JsFiles, true);
+				context.AddScriptsFromDir(layoutDir, FatalJsFileCaches.GetNonFatalJsFiles(layoutViewCtrl.GetType()), true);
 			}
 			#endregion
 
@@ -66,8 +66,8 @@ namespace Formula.Processing
 				if(pageViewCtrl.ShallDraw)
 				{ 
 					string pageDir = FormulaPathHelper.GetPageDir(pageViewCtrl.GetType());
-					context.AddScriptsFromDir(pageDir, pageViewCtrl.GetType()
-						.GetCustomAttribute<NonFatalJsAttribute>()?.JsFiles, false);
+					context.AddScriptsFromDir(pageDir, 
+						FatalJsFileCaches.GetNonFatalJsFiles(pageViewCtrl.GetType()), false);
 					//context.AddStylesFromDir(pageDir);
 				}
 
@@ -133,7 +133,8 @@ namespace Formula.Processing
 
 					string dir = "webobjects/" + string.Join('/', drawingWebObject.Split('.'));
 					Type webobjectType = FormulaPathHelper.GetTypeByWebObjectName(drawingWebObject);
-					context.AddScriptsFromDir(dir, webobjectType?.GetCustomAttribute<NonFatalJsAttribute>()?.JsFiles, false);
+					context.AddScriptsFromDir(dir, webobjectType != null ? 
+						FatalJsFileCaches.GetNonFatalJsFiles(webobjectType) : null, false);
 					if (context.IsFirstPageLoad == false && context.DrawnWebObjects.Contains(drawingWebObject) == false)
 						context.AddWebObjectStylesFromDir(dir, drawingWebObject);
 				}
