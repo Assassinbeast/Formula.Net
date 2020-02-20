@@ -1,35 +1,37 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
 
 namespace Formula.Swagger
 {
     public static class IServicesExtensions
     {
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="service"></param>
-		/// <param name="swaggerApiAssemblies">All the assemblies where the swagger apis are located. 
-		/// If null, it will only generate swagger apis from the Assembly.GetEntryAssembly()</param>
-		/// <returns></returns>
-        public static IServiceCollection AddFormulaSwaggerGen(this IServiceCollection service, IEnumerable<Assembly> swaggerApiAssemblies = null)
+		public static void AddFormulaOpenApiDocuments(this IServiceCollection services)
 		{
-			swaggerApiAssemblies = swaggerApiAssemblies == null ? MainHelper.GetDefaultSwaggerApiAssemblies() : swaggerApiAssemblies;
-
-			var apiNames = MainHelper.GetSwaggerApiNames(swaggerApiAssemblies);
-
-			service.AddSwaggerGen((c) =>
+			var controllerTypes = SwaggerHelper.GetControllerTypes();
+			foreach (var type in controllerTypes)
 			{
-				foreach (string apiName in apiNames)
+				string controllerName = SwaggerHelper.GetControllerNameOfController(type);
+				services.AddOpenApiDocument(x =>
 				{
-					c.SwaggerDoc(apiName.ToLowerInvariant(), new OpenApiInfo { Title = apiName + " - API", Version = "v1" });
-				}
-			});
-			return service;
+					x.DocumentName = SwaggerHelper.GetDocumentNameOfController(type);
+					x.ApiGroupNames = new string[] { type.Name };
+					x.PostProcess = process =>
+					{
+						process.Info.Version = "v1";
+						process.Info.Title = controllerName;
+						process.Info.Description = $"{controllerName} API";
+						foreach (var operation in process.Operations)
+						{
+							operation.Operation.OperationId = string.Join('_',
+								operation.Operation.OperationId.Split('_', StringSplitOptions.RemoveEmptyEntries).Skip(1));
+						}
+					};
+					x.UseRouteNameAsOperationId = false;
+				});
+			}
 		}
-
-
 	}
 }

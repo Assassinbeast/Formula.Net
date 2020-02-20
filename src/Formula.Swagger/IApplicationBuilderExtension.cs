@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 
@@ -6,20 +7,20 @@ namespace Formula.Swagger
 {
     public static class IApplicationBuilderExtensions
     {
-        public static IApplicationBuilder UseFormulaSwaggerUi(this IApplicationBuilder app, List<Assembly> swaggerApiAssemblies = null)
+        public static IApplicationBuilder UseFormulaSwagger(this IApplicationBuilder app, List<Assembly> swaggerApiAssemblies = null)
 		{
-			swaggerApiAssemblies ??= MainHelper.GetDefaultSwaggerApiAssemblies();
-
-			var apiNames = MainHelper.GetSwaggerApiNames(swaggerApiAssemblies);
-			app.UseSwaggerUI(c =>
+			app.UseSwaggerUi3(x =>
 			{
-				foreach (string apiName in apiNames)
+				//Add if you wanna override defaults and show whats from swagger.json files
+				string[] files = Directory.GetFiles(Path.Combine("wwwroot", "swaggerdocs"));
+				foreach (string file in files)
 				{
-					//Here, we specify the swaggers json files we generated
-					//Its in our, eg: wwwroot/swaggerdocs/bar.swagger.json
-					c.SwaggerEndpoint($"/swaggerdocs/{apiName.ToLowerInvariant()}.swagger.json", apiName);
+					var fileName = file.Split(Path.DirectorySeparatorChar)[^1];
+					fileName = fileName.Substring(0, fileName.Length - ".swagger.json".Length); //hello-world
+					x.SwaggerRoutes.Add(new NSwag.AspNetCore.SwaggerUi3Route(fileName, $"/swaggerdocs/{fileName}.swagger.json"));
 				}
 			});
+
 			return app;
 		}
     }
