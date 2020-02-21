@@ -30,6 +30,9 @@ namespace Formula.Swagger
         {
             var swaggerGenerator = host.Services.GetRequiredService<IOpenApiDocumentGenerator>();
 
+            if (Directory.Exists(Path.Combine("wwwroot", "swaggerdocs")))
+                Directory.Delete(Path.Combine("wwwroot", "swaggerdocs"), true);
+
             var apiTypes = SwaggerHelper.GetControllerTypes();
             foreach (Type apiType in apiTypes)
             {
@@ -44,6 +47,9 @@ namespace Formula.Swagger
 
         static async Task CreateSwaggerClients(IHost host)
         {
+            //Directory.Delete(Path.Combine("wwwroot", "swaggerdocs"), true);
+            if (Directory.Exists(Path.Combine("WebObjects", "Clients")))
+                Directory.Delete(Path.Combine("WebObjects", "Clients"), true);
             string[] files = Directory.GetFiles(Path.Combine("wwwroot", "swaggerdocs"));
             foreach (string file in files)
             {
@@ -66,10 +72,15 @@ namespace Formula.Swagger
             var generator = new TypeScriptClientGenerator(openApidocument, settings);
             var code = generator.GenerateFile();
             code = code.Replace("this.baseUrl = baseUrl ? baseUrl : \"/\";", "this.baseUrl = baseUrl ? baseUrl : \"\";");
-            //code = CreateWebObjectCode(module) + "\n" + code;
+            code = CreateWebObjectCode(name) + "\n" + code;
             string filePath = Path.Combine("WebObjects", "Clients", name, $"{name}WebObject.ts");
             var status = await UpsertFileIfDifferent(filePath, code);
             _logger.LogInformation("Swagger client generation: {filePath}. Status: {status}", filePath, status);
+        }
+
+        static string CreateWebObjectCode(string name)
+        {
+            return $"namespace WebObjects.Clients.{name} {{ export class {name}WebObject extends ff.WebObject {{ }} }}";
         }
 
         private static async Task<UpsertStatus> UpsertFileIfDifferent(string filePath, string content)

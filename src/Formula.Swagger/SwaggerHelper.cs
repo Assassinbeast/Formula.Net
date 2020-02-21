@@ -10,6 +10,8 @@ namespace Formula.Swagger
 {
     internal static class SwaggerHelper
     {
+        const string PostName = "Controller";
+
         public static Type[] GetControllerTypes()
         {
             return Assembly.GetEntryAssembly().GetTypes()
@@ -20,10 +22,8 @@ namespace Formula.Swagger
         {
             //If Controller name is HelloWorldController, then documentname must be hello-world
 
-            string controllerText = "Controller";
-
             //Turns name 'HelloWorldController' into 'HelloWorld'
-            string name = controllerType.Name.Substring(0, controllerType.Name.Length - controllerText.Length);
+            string name = controllerType.Name.Substring(0, controllerType.Name.Length - PostName.Length);
 
             StringBuilder sb = new StringBuilder(name);
             for (int i = sb.Length - 1; i >= 0; i--)
@@ -37,8 +37,7 @@ namespace Formula.Swagger
         public static string GetControllerNameOfController(Type type)
         {
             //Turns name 'HelloWorldController' into 'HelloWorld'
-            string controllerText = "Controller";
-            string name = type.Name.Substring(0, type.Name.Length - controllerText.Length);
+            string name = type.Name.Substring(0, type.Name.Length - PostName.Length);
 
             return name;
         }
