@@ -47,7 +47,6 @@ namespace Formula.Swagger
 
         static async Task CreateSwaggerClients(IHost host)
         {
-            //Directory.Delete(Path.Combine("wwwroot", "swaggerdocs"), true);
             if (Directory.Exists(Path.Combine("WebObjects", "Clients")))
                 Directory.Delete(Path.Combine("WebObjects", "Clients"), true);
             string[] files = Directory.GetFiles(Path.Combine("wwwroot", "swaggerdocs"));
