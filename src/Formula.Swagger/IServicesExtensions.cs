@@ -8,7 +8,7 @@ namespace Formula.Swagger
 {
     public static class IServicesExtensions
     {
-		public static void AddFormulaOpenApiDocuments(this IServiceCollection services)
+		public static void AddFormulaOpenApiDocuments(this IServiceCollection services, string host)
 		{
 			var controllerTypes = SwaggerHelper.GetControllerTypes();
 			foreach (var type in controllerTypes)
@@ -28,6 +28,7 @@ namespace Formula.Swagger
 							operation.Operation.OperationId = string.Join('_',
 								operation.Operation.OperationId.Split('_', StringSplitOptions.RemoveEmptyEntries).Skip(1));
 						}
+						process.Host = host;
 					};
 					x.UseRouteNameAsOperationId = false;
 				});
