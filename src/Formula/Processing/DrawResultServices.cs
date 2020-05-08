@@ -12,10 +12,10 @@ namespace Formula.Processing
 		public static string RootPageNamespace;
 		private static Assembly _assembly;
 
-		public static void Initialize(Assembly assembly, Type rootPageType)
+		public static void Initialize(Assembly assembly, string defaultNamespace)
 		{
 			_assembly = assembly;
-			RootPageNamespace = string.Join('.', rootPageType.Namespace.Split('.').SkipLast(1));
+			RootPageNamespace = defaultNamespace + ".Pages";
 
 			var pageTypes = GetPageTypes();
 			foreach (Type pageType in pageTypes)

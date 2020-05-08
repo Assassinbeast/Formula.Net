@@ -86,7 +86,7 @@ namespace Formula
 		public static void InitializeApp(IWebHostEnvironment env, FormulaConfigArg settings)
 		{
 			FormulaConfig.Initialize(env, settings);
-			DrawResultServices.Initialize(settings.AppAssembly, settings.RootPageType);
+			DrawResultServices.Initialize(settings.AppAssembly, settings.DefaultNamespace);
 		}
 	}
 }

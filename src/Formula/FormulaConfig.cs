@@ -64,7 +64,7 @@ namespace Formula
 		/// </summary>
 		public bool? CacheJsAndCss;
 
-		public Type RootPageType;
+		public string DefaultNamespace { get; set; }
 
 
 		/// <param name="appAssembly">Specify where your Formula Pages in your app are located</param>
@@ -76,21 +76,18 @@ namespace Formula
 		/// because the client be up-to-date with the latest js/css etc.</param>
 		/// <param name="defaultLayout">Specify the default Layout that pages will use as a Layout.
 		/// Its required even if you only have one Layout</param>
-		/// <param name="rootPageType">Specify one of your pages that is on the root</param>
 		/// <param name="getPageCallback">Specify your callback function that will set a page to draw</param>
-		public FormulaConfigArg(Assembly appAssembly, int appVersion, Type defaultLayout, Type rootPageType)
+		public FormulaConfigArg(Assembly appAssembly, int appVersion, Type defaultLayout, string defaultNamespace)
 		{
 			if (appAssembly == null)
 				throw new ArgumentException($"{nameof(appAssembly)} is null");
 			if (defaultLayout == null)
 				throw new ArgumentException($"{nameof(defaultLayout)} is null");
-			if (rootPageType == null)
-				throw new ArgumentException($"{nameof(rootPageType)} is null");
 
 			this.AppAssembly = appAssembly;
 			this.AppVersion = appVersion;
 			this.DefaultLayout = defaultLayout;
-			this.RootPageType = rootPageType;
+			this.DefaultNamespace = defaultNamespace;
 		}
 	}
 
@@ -106,6 +103,10 @@ namespace Formula
 		public static int MaxRedirectCount { get; private set; }
 		public static bool CacheJsAndCss { get; private set; }
 		public static Func<string, string> FullTitleGenerationFunc { get; private set; }
+		/// <summary>
+		/// Eg Contoso.Web
+		/// </summary>
+		public static string DefaultNamespace { get; set; }
 
 		public static void Initialize(IWebHostEnvironment env, FormulaConfigArg config)
 		{
@@ -117,12 +118,13 @@ namespace Formula
 			AppVersion = config.AppVersion;
 			AppType = GetAppType(config.AppAssembly);
 			DefaultLayoutType = config.DefaultLayout;
-			RootPageType = config.RootPageType;
 			BaseTitle = config.BaseTitle ?? Assembly.GetEntryAssembly().GetName().Name;
 			Cdn = config.Cdn?.TrimEnd('/');
 			MaxRedirectCount = config.MaxInternalRedirectCount ?? 3;
 			CacheJsAndCss = config.CacheJsAndCss ?? !env.IsDevelopment();
 			FullTitleGenerationFunc = config.FullTitleGenerationFunc ?? StandardFunctions.StandardFullTitleGenerationFunc;
+			DefaultNamespace = config.DefaultNamespace;
+
 		}
 		static Type GetAppType(Assembly assembly)
 		{

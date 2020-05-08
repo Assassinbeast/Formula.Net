@@ -15,8 +15,7 @@ namespace Formula
 		/// </summary>
 		public static string PageName(Type pageType)
 		{
-			Match match = Regex.Match(pageType.Namespace, @"^.+\.Pages\.(.+)");
-			return match.Groups[1].Value;
+			return pageType.Namespace.Substring(FormulaConfig.DefaultNamespace.Length + 1 + "Pages.".Length);
 		}
 		/// <summary>
 		/// FullName: "Contoso.Layouts.Main.MainLayout"
@@ -28,35 +27,30 @@ namespace Formula
 		}
 		
 		/// <summary>
-		/// Fullname: Contoso.Pages.Account.Settings
-		/// Returns: /Pages/Account/Settings/Settings.cshtml
+		/// Fullname: Contoso.Web.Pages.Account.Settings.SettingsPage
+		/// Returns: /Pages/Account/Settings/SettingsPage.cshtml
 		/// </summary>
 		/// <param name="type">The type of the class</param>
-		/// <param name="isTypeInOwnFolder">If true, then it will append its own folder. 
-		/// Eg if the types fullname is Contoso.Pages.Account.Settings, then it will return 
-		/// /Pages/Account/Settings/Settings.cshtml, if false, then: /Pages/Account/Settings.cshtml</param>
-		/// <returns></returns>
 		public static string View(Type type, bool withExtension = false)
 		{
 			return GetFilePathByConvention(type, withExtension ? "cshtml" : null);
 		}
 		private static string GetFilePathByConvention(Type type, string fileExt)
 		{
-			//TODO: Delete this function, only cshtml is useing this
-			string[] pathLevels = type.FullName.Split('.'); // ["Contoso", "Pages", "Foo", "FooPage"]
-			StringBuilder sb = new StringBuilder();
-			for (int i = 1; i < pathLevels.Length; i++)
-				sb.Append("/" + pathLevels[i]);
-			sb.Append((fileExt == null ? "" : "." + fileExt));
-			return sb.ToString();
+			string t = type.FullName.Substring(FormulaConfig.DefaultNamespace.Length + 1); //Pages.Account.Settings.SettingsPage
+			t = $"/{t.Replace('.', '/')}";
+			if (string.IsNullOrWhiteSpace(fileExt) == false)
+				t = t + ".cshtml";
+			return t;
 		}
 		
 		public static bool IsTypeALayout(Type layoutOrPageType)
 		{
-			string[] splittedFullName = layoutOrPageType.FullName.Split('.');
-			if (splittedFullName[1] == "Pages")
+			string t = layoutOrPageType.FullName.Substring(FormulaConfig.DefaultNamespace.Length + 1); //Pages.Account.Settings.SettingsPage
+			string t2 = t.Split('.')[0];
+			if (t2 == "Pages")
 				return false;
-			else if (splittedFullName[1] == "Layouts")
+			else if (t2 == "Layouts")
 				return true;
 			throw new System.ArgumentException("The type is neither a Page or Layout");
 		}
@@ -71,20 +65,23 @@ namespace Formula
 		}
 		public static string GetPageDir(Type pageType)
 		{
-			string fullName = pageType.Namespace; // Contoso.Pages.Account
-			string[] nameItems = fullName.Split('.'); // ["Contoso", "Pages", "Account"]
-			return Path.Combine(nameItems.Skip(1).ToArray());
+			string t = pageType.Namespace.Substring(FormulaConfig.DefaultNamespace.Length + 1); //Pages.Account.Settings.SettingsPage
+			return Path.Combine(t.Split('.'));
 		}
 
-		public static Type GetTypeByWebObjectName(string fullName)
+		public static Type GetTypeByWebObjectName(string webObjName)
 		{
+			//webObjName eg: Menus.TopMenu
+
 			//If "Menus.TopMenu" then FullName is "<DefaultNamespace>.WebObjects.Menus.TopMenu.TopMenuWebObject"
 			//If "Calendar" then FullName is "<DefaultNamespace>.WebObjects.Calendar.CalendarWebObject"
 
-			var name = fullName.Split('.').Last();
+			var lastNamePart = webObjName.Split('.').Last();
+
+			string typeName = $"{FormulaConfig.DefaultNamespace}.WebObjects.{webObjName}.{lastNamePart}WebObject";
 
 			Assembly assembly = Assembly.GetEntryAssembly();
-			return assembly.GetType($"{assembly.GetName().Name}.WebObjects.{fullName}.{name}");
+			return assembly.GetType(typeName);
 		}
 	}
 }
