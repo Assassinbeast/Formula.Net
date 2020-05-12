@@ -2,7 +2,7 @@
 
 namespace Formula
 {
-	class MetaDataAttribute : Attribute
+	public class MetaDataAttribute : Attribute
 	{
 		public Type Layout;
 	}
