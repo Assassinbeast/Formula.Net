@@ -33,14 +33,4 @@ namespace Formula
 			this.Key = key;
 		}
 	}
-	public class NonFatalJsAttribute: Attribute
-	{
-		public string[] JsFiles;
-
-		/// <param name="jsFiles">Put in the filepaths without</param>
-		public NonFatalJsAttribute(params string[] jsFiles)
-		{
-			this.JsFiles = jsFiles;
-		}
-	}
 }

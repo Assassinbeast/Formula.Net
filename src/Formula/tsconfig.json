@@ -1,7 +1,11 @@
 {
   "disableCompileOnSave": true,
   "compilerOptions": {
-    "target": "ES5"
+    //todo: when "module: xxx" property is deleted, 
+    //error happens in formula.ts in dynamic import. 
+    //Also, we need to turn this on in gulpfile.js when compiling, right?
+    "module": "commonjs",
+    "target": "ES6"
   }
 }
 

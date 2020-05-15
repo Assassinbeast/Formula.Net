@@ -57,12 +57,6 @@ namespace Formula
 		/// If it exceeds the maximum limit, then the webapp will throw an exception.
 		/// </summary>
 		public int? MaxInternalRedirectCount;
-		/// <summary>
-		/// If true, and you update a css/js file, then the new files wont be served
-		/// unless you restart the dotnet webapp..
-		/// The default value is false when dotnet environment is in "Development", otherwise its true.
-		/// </summary>
-		public bool? CacheJsAndCss;
 
 		public string DefaultNamespace { get; set; }
 
@@ -101,7 +95,6 @@ namespace Formula
 		public static string BaseTitle { get; private set; }
 		public static string Cdn { get; private set; }
 		public static int MaxRedirectCount { get; private set; }
-		public static bool CacheJsAndCss { get; private set; }
 		public static Func<string, string> FullTitleGenerationFunc { get; private set; }
 		/// <summary>
 		/// Eg Contoso.Web
@@ -121,7 +114,6 @@ namespace Formula
 			BaseTitle = config.BaseTitle ?? Assembly.GetEntryAssembly().GetName().Name;
 			Cdn = config.Cdn?.TrimEnd('/');
 			MaxRedirectCount = config.MaxInternalRedirectCount ?? 3;
-			CacheJsAndCss = config.CacheJsAndCss ?? !env.IsDevelopment();
 			FullTitleGenerationFunc = config.FullTitleGenerationFunc ?? StandardFunctions.StandardFullTitleGenerationFunc;
 			DefaultNamespace = config.DefaultNamespace;
 

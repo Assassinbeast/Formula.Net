@@ -18,8 +18,8 @@ namespace Formula.Helpers
 			string dirPath = Path.GetDirectoryName(filePath);
 			return FileProvider.GetDirectoryContents(dirPath)
 				.FirstOrDefault(
-					x => x.Exists && 
-					!x.IsDirectory && 
+					x => x.Exists &&
+					!x.IsDirectory &&
 					 x.Name == Path.GetFileName(filePath));
 		}
 

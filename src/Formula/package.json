@@ -29,5 +29,14 @@
   },
   "dependencies": {
     "@types/node": "^10.12.15"
+  },
+  "eslintConfig": {
+    "rules": {
+      "@typescript-eslint/no-namespace": "off"
+    },
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "sourceType": "module"
+    }
   }
 }

@@ -1,17 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Threading.Tasks;
-using Formula.Helpers;
+﻿using Formula.Helpers;
 using Formula.LogicActions;
 using Formula.Tools;
 using Formula.Utility;
 using HtmlAgilityPack;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Formula.Processing
 {
-    internal static class DrawProcessor
-    {
+	internal static class DrawProcessor
+	{
 		public static async Task<string> Process(DrawResult drawResult,
 			FormulaContext context)
 		{
@@ -26,7 +26,7 @@ namespace Formula.Processing
 			if (app.ShallDraw)
 			{
 				string appDir = FormulaPathHelper.GetAppDir();
-				context.AddScriptsFromDir(appDir, FatalJsFileCaches.GetNonFatalJsFiles(app.GetType()), true);
+				context.AddScriptsFromDir(appDir, true);
 			}
 			#endregion
 
@@ -39,7 +39,7 @@ namespace Formula.Processing
 			if (layoutViewCtrl.ShallDraw)
 			{
 				string layoutDir = FormulaPathHelper.GetLayoutDir(layoutViewCtrl.GetType());
-				context.AddScriptsFromDir(layoutDir, FatalJsFileCaches.GetNonFatalJsFiles(layoutViewCtrl.GetType()), true);
+				context.AddScriptsFromDir(layoutDir, true);
 			}
 			#endregion
 
@@ -63,11 +63,10 @@ namespace Formula.Processing
 				pageViewCtrl.Context = context;
 				pageViewCtrl.ShallDraw = shallDrawPage;
 
-				if(pageViewCtrl.ShallDraw)
-				{ 
+				if (pageViewCtrl.ShallDraw)
+				{
 					string pageDir = FormulaPathHelper.GetPageDir(pageViewCtrl.GetType());
-					context.AddScriptsFromDir(pageDir, 
-						FatalJsFileCaches.GetNonFatalJsFiles(pageViewCtrl.GetType()), false);
+					context.AddScriptsFromDir(pageDir, false);
 					//context.AddStylesFromDir(pageDir);
 				}
 
@@ -89,10 +88,10 @@ namespace Formula.Processing
 				else //Its Page
 					viewCtrl = context.Pages[i];
 				#endregion
-				
+
 				DrawProcessorHelper.SetViewControllerParameters(context, viewCtrl);
 
-				LogicAction logicAction = null;
+				LogicAction logicAction;
 				if (DrawProcessorHelper.ShallFireAsyncProcessLogic(viewCtrl))
 					logicAction = await viewCtrl.ProcessLogicAsync();
 				else
@@ -112,7 +111,7 @@ namespace Formula.Processing
 				if (page.ShallDraw)
 					drawingPages.Add(page.GetType());
 			htmlDoc = await FormulaHtmlDrawer.DrawFormulaHtml(
-				app, layoutViewCtrl, context.Pages, 
+				app, layoutViewCtrl, context.Pages,
 				(IViewRender)context.HttpContext.RequestServices.GetService(typeof(IViewRender)));
 			#endregion
 
@@ -125,7 +124,7 @@ namespace Formula.Processing
 				foreach (HtmlNode webobjNode in webObjectNodes)
 				{
 					HtmlAttribute attr = webobjNode.Attributes["ff-webobject"];
-					drawingWebObjects.Add(attr.Value); 
+					drawingWebObjects.Add(attr.Value);
 				}
 				foreach (string drawingWebObject in drawingWebObjects)
 				{
@@ -133,15 +132,14 @@ namespace Formula.Processing
 
 					string dir = "webobjects/" + string.Join('/', drawingWebObject.Split('.'));
 					Type webobjectType = FormulaPathHelper.GetTypeByWebObjectName(drawingWebObject);
-					context.AddScriptsFromDir(dir, webobjectType != null ? 
-						FatalJsFileCaches.GetNonFatalJsFiles(webobjectType) : null, false);
+					context.AddScriptsFromDir(dir, false);
 					if (context.IsFirstPageLoad == false && context.DrawnWebObjects.Contains(drawingWebObject) == false)
 						context.AddWebObjectStylesFromDir(dir, drawingWebObject);
 				}
 			}
 			#endregion
 
-	 		#region Finish the html text
+			#region Finish the html text
 			if (context.IsFirstPageLoad == true)
 			{
 				FormulaHtmlDrawer.InsertWebObjectStyles(htmlDoc.GetElementbyId("ff-webobject-styles"), drawingWebObjects);
@@ -200,11 +198,11 @@ namespace Formula.Processing
 
 		static async Task<string> ProcessNonContinueLogicAction(LogicAction logicAction, FormulaContext context)
 		{
-			if(logicAction is UrlRedirect urlRedirect)
+			if (logicAction is UrlRedirect urlRedirect)
 			{
 				bool redirectToSameOrigin;
 				if (urlRedirect.Location.StartsWith("http://") || urlRedirect.Location.StartsWith("https://"))
-				{ 
+				{
 					redirectToSameOrigin = urlRedirect.Location.StartsWith(context.HttpContext.Request.Host.Value);
 					if (redirectToSameOrigin)
 						urlRedirect.Location = urlRedirect.Location.Substring(context.HttpContext.Request.Host.Value.Length);
@@ -212,8 +210,8 @@ namespace Formula.Processing
 				else
 					redirectToSameOrigin = true;
 
-				if(redirectToSameOrigin == false || context.IsFirstPageLoad)
-				{ 
+				if (redirectToSameOrigin == false || context.IsFirstPageLoad)
+				{
 					context.HttpContext.Response.Headers["location"] = urlRedirect.Location;
 					context.HttpContext.Response.StatusCode = urlRedirect.StatusCode;
 				}
@@ -225,7 +223,7 @@ namespace Formula.Processing
 				}
 				return null;
 			}
-			else if(logicAction is LogicActions.RedirectDraw)
+			else if (logicAction is LogicActions.RedirectDraw)
 			{
 				var redirectDraw = (LogicActions.RedirectDraw)logicAction;
 				DrawResult drawResult = DrawResultServices.GetDrawResult(redirectDraw.PageType);
@@ -234,7 +232,5 @@ namespace Formula.Processing
 			}
 			throw new System.ArgumentException("Fatal error in the Formula framework");
 		}
-
-
 	}
 }

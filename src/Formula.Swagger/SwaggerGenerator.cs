@@ -47,8 +47,8 @@ namespace Formula.Swagger
 
         static async Task CreateSwaggerClients(IHost host)
         {
-            if (Directory.Exists(Path.Combine("WebObjects", "Clients")))
-                Directory.Delete(Path.Combine("WebObjects", "Clients"), true);
+            if (Directory.Exists(Path.Combine("JsLibs", "Clients")))
+                Directory.Delete(Path.Combine("JsLibs", "Clients"), true);
             string[] files = Directory.GetFiles(Path.Combine("wwwroot", "swaggerdocs"));
             foreach (string file in files)
             {
@@ -65,21 +65,15 @@ namespace Formula.Swagger
                 ClassName = $"{name}Client",
                 TypeScriptGeneratorSettings =
                 {
-                    Namespace = $"WebObjects.Clients.{name}"
                 },
             };
             var generator = new TypeScriptClientGenerator(openApidocument, settings);
             var code = generator.GenerateFile();
             code = code.Replace("this.baseUrl = baseUrl ? baseUrl : \"/\";", "this.baseUrl = baseUrl ? baseUrl : \"\";");
-            code = CreateWebObjectCode(name) + "\n" + code;
-            string filePath = Path.Combine("WebObjects", "Clients", name, $"{name}WebObject.ts");
+
+            string filePath = Path.Combine("JsLibs", "Clients", $"{name}Client.ts");
             var status = await UpsertFileIfDifferent(filePath, code);
             _logger.LogInformation("Swagger client generation: {filePath}. Status: {status}", filePath, status);
-        }
-
-        static string CreateWebObjectCode(string name)
-        {
-            return $"namespace WebObjects.Clients.{name} {{ export class {name}WebObject extends ff.WebObject {{ }} }}";
         }
 
         private static async Task<UpsertStatus> UpsertFileIfDifferent(string filePath, string content)

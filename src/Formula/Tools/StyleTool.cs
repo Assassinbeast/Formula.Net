@@ -16,9 +16,6 @@ namespace Formula.Tools
 			string systemDirWithoutWwwroot = PathHelper.ToSystemPath(dirWithoutWwwroot);
 			var targetStyleDic = includeSubDir ? _cachedStyleStringsIncludeSubDir : _cachedStyleStringsExcludeSubDir;
 
-			if (FormulaConfig.CacheJsAndCss && targetStyleDic.ContainsKey(systemDirWithoutWwwroot))
-				return targetStyleDic[systemDirWithoutWwwroot];
-
 			List<string> styleElementStrings = new List<string>();
 			string systemDirWithWwwroot = $"{_wwwrootDirectory}{systemDirWithoutWwwroot}";
 			var cssSystemPathsWithWwwroot = FileHelper.GetFilesInDirectory(systemDirWithWwwroot, "css", includeSubDir);
@@ -29,9 +26,6 @@ namespace Formula.Tools
 				if (string.IsNullOrWhiteSpace(htmlStyleValue) == false)
 					styleElementStrings.Add(htmlStyleValue);
 			}
-
-			if (FormulaConfig.CacheJsAndCss)
-				targetStyleDic.TryAdd(systemDirWithWwwroot, styleElementStrings);
 			return styleElementStrings;
 		}
 
