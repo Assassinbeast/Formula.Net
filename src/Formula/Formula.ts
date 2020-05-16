@@ -2,6 +2,7 @@
 This engine namespace is used by the framework. 
 Developers shouldn't use this.
 */
+
 export namespace Engine
 {
 	export class CoreManager
@@ -39,7 +40,7 @@ export namespace Engine
 
 				await coreMGR.viewControllerMGR.createApp($appElement);
 				coreMGR.viewControllerMGR.createViewControllers($appElement);
-				coreMGR.webobjectMGR.createWebObjects($appElement);
+				await coreMGR.webobjectMGR.createWebObjects($appElement);
 
 				await coreMGR.viewControllerMGR.startApp();
 				coreMGR.viewControllerMGR.startUnstartedViewControllers();
@@ -350,11 +351,11 @@ export namespace Engine
 			var pageRequestHeaders = this.getPageRequestHeaders();
 
 			var xhr = new XMLHttpRequest();
-			xhr.onreadystatechange = () =>
+			xhr.onreadystatechange = async () =>
 			{
 				if (xhr.readyState != 4) //If not done
 					return;
-				this.SPAPageChange2_ReceiveResponse(xhr, changePageId);
+				await this.SPAPageChange2_ReceiveResponse(xhr, changePageId);
 			};
 			var urlItems: Utility.UrlItems = Utility.getUrlItems(href);
 			var urlItemsString = Utility.getHrefByUrlItems(urlItems);
@@ -367,7 +368,7 @@ export namespace Engine
 			this.setState(HistoryManager.State.Changing);
 			xhr.send();
 		}
-		private SPAPageChange2_ReceiveResponse(httpRequest: XMLHttpRequest, changePageId: number)
+		private async SPAPageChange2_ReceiveResponse(httpRequest: XMLHttpRequest, changePageId: number)
 		{
 			//console.log("SPAPageChange2_ReceiveResponse()")
 
@@ -416,20 +417,20 @@ export namespace Engine
 				return;
 			}
 
-			this.SPAPageChange3_LoadJavascript(httpRequest, $newViewCtrl, coreMGR.rData, changePageId);
+			await this.SPAPageChange3_LoadJavascript(httpRequest, $newViewCtrl, coreMGR.rData, changePageId);
 		}
-		private SPAPageChange3_LoadJavascript(httpRequest: XMLHttpRequest, $newViewCtrl: HTMLElement, rData: Items.RData, changePageId: number)
+		private async SPAPageChange3_LoadJavascript(httpRequest: XMLHttpRequest, $newViewCtrl: HTMLElement, rData: Items.RData, changePageId: number)
 		{
 			//TODO: put await on it?
-			Utility.loadJavascriptFromRData(rData, () =>
+			await Utility.loadJavascriptFromRData(rData, async () =>
 			{
 				if (this.changePageId != changePageId)
 					return;
-				this.SPAPageChange4_UpdateStyleDOM(httpRequest, $newViewCtrl, rData);
+				await this.SPAPageChange4_UpdateStyleDOM(httpRequest, $newViewCtrl, rData);
 			});
 		}
 
-		private SPAPageChange4_UpdateStyleDOM(httpRequest: XMLHttpRequest, $newViewCtrl: HTMLElement, rData: Items.RData)
+		private async SPAPageChange4_UpdateStyleDOM(httpRequest: XMLHttpRequest, $newViewCtrl: HTMLElement, rData: Items.RData)
 		{
 			//console.log("SPAPageChange5_UpdateStyleDOM");
 			//console.log(newHtml);
@@ -442,9 +443,9 @@ export namespace Engine
 				$webobjStyleDiv.appendChild(styleElement);
 			}
 
-			this.SPAPageChange5_UpdateNewHtmlDOM(httpRequest, $newViewCtrl, rData);
+			await this.SPAPageChange5_UpdateNewHtmlDOM(httpRequest, $newViewCtrl, rData);
 		}
-		private SPAPageChange5_UpdateNewHtmlDOM(httpRequest: XMLHttpRequest, $newViewCtrl: HTMLElement, rData: Items.RData)
+		private async SPAPageChange5_UpdateNewHtmlDOM(httpRequest: XMLHttpRequest, $newViewCtrl: HTMLElement, rData: Items.RData)
 		{
 			var $rcCtrl: Element;
 			if (rData.ff_targetfoldertype == "page")
@@ -488,7 +489,7 @@ export namespace Engine
 			Utility.preProcessHtml($newViewCtrl);
 
 			coreMGR.viewControllerMGR.createViewControllers($newViewCtrl);
-			coreMGR.webobjectMGR.createWebObjects($newViewCtrl);
+			await coreMGR.webobjectMGR.createWebObjects($newViewCtrl);
 
 			coreMGR.viewControllerMGR.startUnstartedViewControllers();
 			coreMGR.webobjectMGR.startUnstartedWebObjects();
@@ -958,24 +959,29 @@ export namespace Engine
 			var fails: string[] = [];
 			var loadCount: number = 0;
 
-			for (var i = 0; i < srcs.length; i++)
+			if (srcs.length == 0)
+				await onDone(fails);
+			else
 			{
-				if (srcs[i].path in this.loadedJs)
+				for (var i = 0; i < srcs.length; i++)
 				{
-					loadCount++;
-					if (loadCount == srcs.length)
-						await onDone(fails);
-				}
-				else
-				{
-					await this.loadJavascript(srcs[i].path, srcs[i].isModule, async (success: boolean, src: string) =>
+					if (srcs[i].path in this.loadedJs)
 					{
-						if (success == false)
-							fails.push(src);
 						loadCount++;
 						if (loadCount == srcs.length)
 							await onDone(fails);
-					});
+					}
+					else
+					{
+						await this.loadJavascript(srcs[i].path, srcs[i].isModule, async (success: boolean, src: string) =>
+						{
+							if (success == false)
+								fails.push(src);
+							loadCount++;
+							if (loadCount == srcs.length)
+								await onDone(fails);
+						});
+					}
 				}
 			}
 		}
@@ -1066,7 +1072,10 @@ export namespace Engine
 			let module = null;
 			try
 			{
-				module = await import('../app/app.js');
+				//reason why we make variable here, is because gulp madge library will 
+				//set app.js as a depedency if it sees it in the import("xxx") statement
+				var src = '/app/app.js';
+				module = await import(src);
 			}
 			catch (e)
 			{
@@ -1076,18 +1085,22 @@ export namespace Engine
 
 			new module.InitializeApp();
 			var app = module.app;
+
+			//TODO: make sure its instance of BaseApp, after we made it to JsModules, this bugs....
+			//console.log(app);
 			if (app instanceof BaseApp == false)
 				throw "App class must be extended from th.BaseApp";
 
 			app.$element = $appElement;
-			app.$element["ff-ref"] = this.app;
+			app.$element["ff-ref"] = app;
 			app.id = coreMGR.miscMGR.createUId();
 			if ("thAwake" in app)
 				(<any>app).thAwake();
 		}
 		async startApp()
 		{
-			let module = await import('../app/app.js');
+			var src = '/app/app.js';
+			let module = await import(src);
 			if ("thStart" in module.app)
 				(<any>module.app).thStart();
 		}
@@ -1202,16 +1215,16 @@ export namespace Engine
 			this.webobjects_type = {};
 			this.unstartedWebobjects = [];
 		}
-		createWebObjects($parentObj: HTMLElement): WebObject[]
+		async createWebObjects($parentObj: HTMLElement): Promise<WebObject[]>
 		{
 			var webobjects: WebObject[] = [];
 			if ($parentObj.getAttribute("ff-webobject"))
-				this.createWebObject($parentObj);
+				await this.createWebObject($parentObj);
 
 			var $webobjects = $parentObj.querySelectorAll("[ff-webobject]");
 			for (var i = 0; i < $webobjects.length; i++)
 			{
-				var newWebObject: WebObject = this.createWebObject(<HTMLElement>$webobjects.item(i));
+				var newWebObject: WebObject = await this.createWebObject(<HTMLElement>$webobjects.item(i));
 				webobjects.push(newWebObject);
 			}
 
@@ -1226,16 +1239,16 @@ export namespace Engine
 			}
 			this.unstartedWebobjects.length = 0;
 		}
-		createWebObject($webobject: HTMLElement): WebObject
+		async createWebObject($webobject: HTMLElement): Promise<WebObject>
 		{
 			if ($webobject["ff-ref"] != null)
 				return;
 
 			var webobjectName = $webobject.getAttribute("ff-webobject");
-			var classObj = Utility.getClassObjFromString(this.getWebObjectFullClassName(webobjectName));
+			var classObj = await this.getWebObjClassFromName(webobjectName);
 			var webobjectInstance: WebObject = null;
 			if (classObj == null)
-				throw "A WebObject couldn't be instantiated. The class '" + this.getWebObjectFullClassName(webobjectName) + "' doesn't exist";
+				throw "A WebObject couldn't be instantiated. The full name is '" + webobjectName + "'";
 
 			webobjectInstance = new classObj();
 			if (webobjectInstance instanceof WebObject == false)
@@ -1256,6 +1269,33 @@ export namespace Engine
 
 			return webobjectInstance;
 		}
+		async getWebObjClassFromName(webObjFullName: string)
+		{
+			var fileName = this.getJsFilePath(webObjFullName);
+			var module = await import(fileName);
+
+			var webObjName = this.getWebObjNameFromFullName(webObjFullName);
+			return module[webObjName + "WebObject"];
+		}
+
+		getJsFilePath(webObjFullName: string): string
+		{
+			//If menu.TopBar
+			//Return /webobjects/menu/topbar/topbarwebobject.js
+
+			var pathItems = webObjFullName.split('.'); // ["menu.TopBar]
+			var webObjName = this.getWebObjNameFromFullName(webObjFullName);
+
+			var path = "/webobjects/" + pathItems.join("/") + "/" + webObjName + "webobject.js";
+			return path.toLowerCase();
+		}
+		getWebObjNameFromFullName(webObjFullName: string): string
+		{
+			var pathItems = webObjFullName.split('.'); // ["menu.TopBar]
+			var webObjFullName = pathItems[pathItems.length - 1];
+			return webObjFullName;
+		}
+
 
 		destroyWebObject(webobject: WebObject)
 		{
@@ -1266,14 +1306,6 @@ export namespace Engine
 				(<any>webobject).thDestroy();
 			delete this.webobjects_id[webobject.id];
 			delete this.webobjects_type[webobject.name][webobject.id];
-		}
-
-		getWebObjectFullClassName(webobjectName: string): string
-		{
-			//webobjectName eg: Calendar or Foods.Burger
-			var nameSegments = webobjectName.split(".");
-			var firstName = nameSegments[nameSegments.length - 1];
-			return "WebObjects." + webobjectName + "." + firstName + "WebObject";
 		}
 	}
 	export class Utility
@@ -1351,7 +1383,6 @@ export namespace Engine
 			{
 				if ($aTag["ff-atag-init"] != null)
 					return;
-
 				$aTag.onclick = () =>
 				{
 					coreMGR.historyMGR.linkClick($aTag.href);
@@ -1442,7 +1473,6 @@ export namespace Engine
 					});
 				}
 			}
-
 			await coreMGR.scriptMGR.loadJavascripts(srcs, (fails: string[]) =>
 			{
 				if (fails.length > 0)
@@ -2030,3 +2060,14 @@ export function initObjects($parentObj: HTMLElement)
 	coreMGR.webobjectMGR.startUnstartedWebObjects();
 	//TODO: make a postProcessHtml
 }
+
+document.onreadystatechange = async function ()
+{
+	if (document.readyState === "complete")
+	{
+		console.log("start");
+		await start();
+	}
+};
+
+
