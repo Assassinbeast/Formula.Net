@@ -1,0 +1,25 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<title>No script</title>
+	<script>
+		function getQueryValueByKey(key)
+		{
+			key = key.replace(/[\[\]]/g, '\\$&');
+			var regex = new RegExp('[?&]' + key + '(=([^&#]*)|&|#|$)'),
+				results = regex.exec(window.location.href);
+			if (!results) return null;
+			if (!results[2]) return '';
+			return decodeURIComponent(results[2].replace(/\+/g, ' '));
+		}
+
+		var redirectPath = getQueryValueByKey("redirect");
+		window.location.href = window.location.origin + redirectPath;
+	</script>
+</head>
+<body>
+
+	<h1>Please turn your javascript on</h1>
+	<p>This site only works with javascript</p>
+</body>
+</html>

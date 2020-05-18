@@ -1,0 +1,1 @@
+﻿window.location.href = "/outdated-browser.html";
