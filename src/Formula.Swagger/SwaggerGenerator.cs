@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -47,17 +48,26 @@ namespace Formula.Swagger
 
         static async Task CreateSwaggerClients(IHost host)
         {
-            if (Directory.Exists(Path.Combine("JsLibs", "Clients")))
-                Directory.Delete(Path.Combine("JsLibs", "Clients"), true);
-            string[] files = Directory.GetFiles(Path.Combine("wwwroot", "swaggerdocs"));
-            foreach (string file in files)
+            //if (Directory.Exists(Path.Combine("JsLibs", "Clients")))
+            //    Directory.Delete(Path.Combine("JsLibs", "Clients"), true);
+            HashSet<string> currentClientFiles = new HashSet<string>();
+
+            string[] swaggerDocs = Directory.GetFiles(Path.Combine("wwwroot", "swaggerdocs"));
+            foreach (string swaggerDoc in swaggerDocs)
             {
-                var openApiDoc = await OpenApiDocument.FromJsonAsync(File.ReadAllText(file));
-                await CreateSwaggerClient(openApiDoc);
+                var openApiDoc = await OpenApiDocument.FromJsonAsync(File.ReadAllText(swaggerDoc));
+                currentClientFiles.Add(await CreateSwaggerClient(openApiDoc));
             }
+
+            HashSet<string> pastClientFiles = Directory.GetFiles(Path.Combine("JsLibs", "Clients"), "*.*", SearchOption.AllDirectories).ToHashSet();
+			foreach (string pastClientFile in pastClientFiles)
+			{
+                if (currentClientFiles.Contains(pastClientFile) == false)
+                    File.Delete(pastClientFile);
+			}
         }
 
-        static async Task CreateSwaggerClient(OpenApiDocument openApidocument)
+        static async Task<string> CreateSwaggerClient(OpenApiDocument openApidocument)
         {
             string name = openApidocument.Info.Title;
             var settings = new TypeScriptClientGeneratorSettings
@@ -74,6 +84,7 @@ namespace Formula.Swagger
             string filePath = Path.Combine("JsLibs", "Clients", $"{name}Client.ts");
             var status = await UpsertFileIfDifferent(filePath, code);
             _logger.LogInformation("Swagger client generation: {filePath}. Status: {status}", filePath, status);
+            return filePath;
         }
 
         private static async Task<UpsertStatus> UpsertFileIfDifferent(string filePath, string content)
