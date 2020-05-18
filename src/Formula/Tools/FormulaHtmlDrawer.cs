@@ -97,9 +97,5 @@ namespace Formula.Tools
 					webobjectStyleDiv.AppendChild(HtmlNode.CreateNode(style));
 			}
 		}
-		public static string DrawPageData(FormulaContext formulaContext)
-		{
-			return $"<div id='ff-pagedata' data-x='{formulaContext.GetPageData()}'></div>";
-		}
 	}
 }

@@ -49,7 +49,14 @@ namespace Formula
 		/// Used so the engine knows where the root Page/Layout namespaces are.
 		/// </summary>
 		public string DefaultNamespace { get; set; }
-		
+		/// <summary>
+		/// Url to the rest api endpoint when frontend request the version from a page, so it can get the correct file from the CDN
+		/// Used to determine the version of a page when frontend requests it from the CDN.
+		/// If not set, it will request the html file page without the 'v' query to get the latest version.
+		/// Its recommended to set it in staging/production environment, 
+		/// but in local test, you dont need it since your local dotnet core server always gives u the latest version.
+		/// </summary>
+		public string PageVersionApiUrl { get; set; }
 
 		/// <param name="appAssembly">Specify where your Formula Pages in your app are located</param>
 		/// <param name="appVersion">The AppVersion when publishing to production. 
@@ -79,7 +86,6 @@ namespace Formula
 	public static class FormulaConfig
 	{
 		public static Assembly AppAssembly { get; private set; }
-		public static int AppVersion { get; private set; }
 		public static Type AppType { get; private set; }
 		public static Type RootPageType{ get; private set; }
 		public static Type DefaultLayoutType { get; private set; }
@@ -90,6 +96,7 @@ namespace Formula
 		/// Eg Contoso.Web
 		/// </summary>
 		public static string DefaultNamespace { get; set; }
+		public static AppData AppData { get; set; }
 
 		public static void Initialize(IWebHostEnvironment env, FormulaConfigArg config)
 		{
@@ -98,13 +105,14 @@ namespace Formula
 				throw new System.ArgumentException("FormulaConfigArg.DefaultLayout must inherit from BaseLayout and not be abstract");
 
 			AppAssembly = config.AppAssembly;
-			AppVersion = config.AppVersion;
 			AppType = GetAppType(config.AppAssembly);
 			DefaultLayoutType = config.DefaultLayout;
 			BaseTitle = config.BaseTitle ?? Assembly.GetEntryAssembly().GetName().Name;
 			MaxRedirectCount = config.MaxInternalRedirectCount ?? 3;
 			FullTitleGenerationFunc = config.FullTitleGenerationFunc ?? StandardFunctions.StandardFullTitleGenerationFunc;
 			DefaultNamespace = config.DefaultNamespace;
+
+			AppData = new AppData(config.AppVersion, config.PageVersionApiUrl);
 
 		}
 		static Type GetAppType(Assembly assembly)

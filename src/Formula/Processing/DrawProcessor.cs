@@ -143,14 +143,15 @@ namespace Formula.Processing
 			if (context.IsFirstPageLoad == true)
 			{
 				FormulaHtmlDrawer.InsertWebObjectStyles(htmlDoc.GetElementbyId("ff-webobject-styles"), drawingWebObjects);
-				var body = htmlDoc.DocumentNode.SelectSingleNode("//body");
-				body.AppendChild(HtmlNode.CreateNode(FormulaHtmlDrawer.DrawPageData(context)));
+
+				var pageData = htmlDoc.GetElementbyId("ff-pagedata");
+				pageData.Attributes["content"].Value = context.GetPageData();
 
 				return htmlDoc.DocumentNode.OuterHtml;
 			}
 			else //SPA-Load
 			{
-				return htmlDoc.DocumentNode.OuterHtml + FormulaHtmlDrawer.DrawPageData(context);
+				return htmlDoc.DocumentNode.OuterHtml;
 			}
 			#endregion
 

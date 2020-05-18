@@ -93,7 +93,6 @@ namespace Formula
 		internal Dictionary<string, object> PageData = new Dictionary<string, object>();
 		internal string GetPageData()
 		{
-			this.PageData.Add("ff_appversion", FormulaConfig.AppVersion);
 			this.PageData.Add("ff_scripts", this.Scripts.Select(x=>x.Value).ToList());
 
 			if (this.IsFirstPageLoad == true)
@@ -113,6 +112,11 @@ namespace Formula
 		public void AddPageData(string key, object value)
 		{
 			this.PageData.Add(key, value);
+		}
+		public string GetAppData()
+		{
+			string x = JsonConvert.SerializeObject(FormulaConfig.AppData);
+			return System.Convert.ToBase64String(Encoding.UTF8.GetBytes(x));
 		}
 	}
 
