@@ -5,7 +5,6 @@ namespace Formula
 	public abstract class ViewController
 	{
 		public FormulaContext Context;
-		public bool ShallDraw;
 
 		public virtual LogicAction ProcessLogic()
 		{
@@ -34,8 +33,7 @@ namespace Formula
 
 		public void SetScrollYExtraSpace(int pixels)
 		{
-			if (this.Context.IsFirstPageLoad == false)
-				this.Context.AddPageData("ff_scrollyextraspace", pixels);
+			this.Context.AddPageData("ff_scrollyextraspace", pixels);
 		}
 	}
 }

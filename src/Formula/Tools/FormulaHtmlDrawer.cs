@@ -12,15 +12,10 @@ namespace Formula.Tools
 		public static async Task<HtmlDocument> DrawFormulaHtml(BaseApp app, BaseLayout layout, List<BasePage> pages, IViewRender render)
 		{
 			List<(Type type, string html)> draws = new List<(Type type, string html)>();
-			if (app.ShallDraw)
-				draws.Add((app.GetType(), ProcessApp(app, await render.RenderAsync("app/app", app))));
-			if (layout.ShallDraw)
-				draws.Add((layout.GetType(), ProcessLayout(layout.GetType(), await render.RenderAsync(FormulaPathHelper.View(layout.GetType()), layout))));
+			draws.Add((app.GetType(), ProcessApp(app, await render.RenderAsync("app/app", app))));
+			draws.Add((layout.GetType(), ProcessLayout(layout.GetType(), await render.RenderAsync(FormulaPathHelper.View(layout.GetType()), layout))));
 			foreach (var page in pages)
-			{ 
-				if (page.ShallDraw)
-					draws.Add((page.GetType(), ProcessPage(page.GetType(), await render.RenderAsync(FormulaPathHelper.View(page.GetType()), page))));
-			}
+				draws.Add((page.GetType(), ProcessPage(page.GetType(), await render.RenderAsync(FormulaPathHelper.View(page.GetType()), page))));
 
 			var doc = new HtmlDocument();
 			doc.LoadHtml(draws[0].html);

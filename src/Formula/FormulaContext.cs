@@ -20,26 +20,14 @@ namespace Formula
 		/// </summary>
 		public string Path; 
 		public bool IsFirstPageLoad;
-		internal string DrawnClientLayout;
-		internal string[] DrawnClientPages;
-		internal HashSet<string> DrawnWebObjects; //Eg: "[menu.sidemenu]"
 
 		internal bool IsClientPageDrawn(Type pageType)
 		{
-			if (this.DrawnClientPages == null) //Null if first-page-load
-				return false;
-			return this.DrawnClientPages.Contains(FormulaPathHelper.PageName(pageType));
+			return false;
 		}
 		internal bool IsClientLayoutDrawn(Type layoutType)
 		{
-			return this.DrawnClientLayout == FormulaPathHelper.LayoutName(layoutType);
-		}
-		internal void SetTargetFfFolder(FfFolderType folderType, string rcTargetFolderPageName)
-		{
-			if (this.IsFirstPageLoad)
-				return; //No need for this header
-			this.PageData["ff_targetfoldertype"] = folderType.ToString().ToLowerInvariant();
-			this.PageData["ff_targetfolderpagename"] = rcTargetFolderPageName;
+			return false;
 		}
 
 		public string Title => FinalPage.GenerateFullTitle();
@@ -73,38 +61,18 @@ namespace Formula
 			foreach (var item in scriptItemsDic)
 				this.Scripts.TryAdd(item.Key, item.Value);
 		}
-		internal void AddWebObjectStylesFromDir(string dir, string webobjectName)
-		{
-			List<string> styleItems = StyleTool.GetStyleElementStrings(dir, false, webobjectName);
-			this.WebObjectStyles.AddRange(styleItems);
-		}
 		
-		internal void Initialize(HttpContext context, string path, 
-			bool isFirstPageLoad, string drawnClientLayout, string[] drawnClientPages, HashSet<string> drawnWebObjects)
+		internal void Initialize(HttpContext context, string path)
 		{
 			this.HttpContext = context;
 			this.Path = path;
-			this.IsFirstPageLoad = isFirstPageLoad;
-			this.DrawnClientLayout = drawnClientLayout;
-			this.DrawnClientPages = drawnClientPages;
-			this.DrawnWebObjects = drawnWebObjects;
 		}
 
 		internal Dictionary<string, object> PageData = new Dictionary<string, object>();
 		internal string GetPageData()
 		{
 			this.PageData.Add("ff_scripts", this.Scripts.Select(x=>x.Value).ToList());
-
-			if (this.IsFirstPageLoad == true)
-			{
-				this.PageData.Add("ff_polyfills", Utility.Polyfill.GetPolyfills(this));
-			}
-			else // SPA load
-			{
-				this.PageData.Add("ff_title", this.Title);
-				//If First Page load, then it will be set in the html in the #ff-webobject-styles element in the DrawProcessor.cs
-				this.PageData.Add("ff_webobjectstyles", this.WebObjectStyles); 
-			}
+			this.PageData.Add("ff_polyfills", Utility.Polyfill.GetPolyfills(this));
 
 			string x = JsonConvert.SerializeObject(PageData, EngineItems.JsonSettings);
 			return System.Convert.ToBase64String(Encoding.UTF8.GetBytes(x));

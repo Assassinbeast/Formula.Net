@@ -8,10 +8,6 @@ namespace Formula
 		{
 			return new LogicActions.Continue();
 		}
-		public static LogicActions.UrlRedirect UrlRedirect(RedirectStatus statusCode, string location)
-		{
-			return new LogicActions.UrlRedirect((int)statusCode, location);
-		}
 		public static LogicActions.RedirectDraw RedirectDraw(Type pageType)
 		{
 			return new LogicActions.RedirectDraw(pageType);
@@ -21,16 +17,6 @@ namespace Formula
 	namespace LogicActions
 	{
 		public class Continue : LogicAction { }
-		public class UrlRedirect: LogicAction
-		{
-			public int StatusCode;
-			public string Location;
-			public UrlRedirect(int statusCode, string location)
-			{
-				this.StatusCode = statusCode;
-				this.Location = location;
-			}
-		}
 		public class RedirectDraw: LogicAction
 		{
 			public Type PageType;

@@ -40,23 +40,8 @@ namespace Formula
 		}
 		public static FormulaContext CreateFormulaContext(HttpContext context, string path)
 		{
-			bool isFirstPageLoad = !context.Request.Headers.ContainsKey("ff_layout");
-			if(isFirstPageLoad == false)
-			{
-				if (context.Request.Headers.ContainsKey("ff_pages") == false ||
-					context.Request.Headers.ContainsKey("ff_webobjects") == false)
-					return null;
-			}
-
 			FormulaContext formulaContext = new FormulaContext();
-
-			if (isFirstPageLoad == true)
-				formulaContext.Initialize(context, path, true, null , null, null);
-			else
-				formulaContext.Initialize(context, path, false, 
-					context.Request.Headers["ff_layout"].ToString(),
-					context.Request.Headers["ff_pages"].ToString().ToObject<string[]>(),
-					context.Request.Headers["ff_webobjects"].ToString().ToObject<HashSet<string>>());
+			formulaContext.Initialize(context, path);
 			return formulaContext;
 		}
 		static void LogRequest(HttpContext context)
