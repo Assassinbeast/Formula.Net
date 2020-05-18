@@ -17,9 +17,13 @@ namespace Formula
 	}
 
 	public abstract class BaseApp : ViewController { }
-	public abstract class BaseLayout : ViewController { }
+	public abstract class BaseLayout : ViewController 
+	{
+		public string Variant { get; set; }
+	}
 	public abstract class BasePage : ViewController
 	{
+		public object Variant { get; set; }
 		public virtual string Title { get; set; }
 
 		/// <summary>

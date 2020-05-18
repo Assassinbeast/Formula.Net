@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
+using Newtonsoft.Json;
 
 namespace Formula.Tools
 {
@@ -13,9 +14,9 @@ namespace Formula.Tools
 		{
 			List<(Type type, string html)> draws = new List<(Type type, string html)>();
 			draws.Add((app.GetType(), ProcessApp(app, await render.RenderAsync("app/app", app))));
-			draws.Add((layout.GetType(), ProcessLayout(layout.GetType(), await render.RenderAsync(FormulaPathHelper.View(layout.GetType()), layout))));
+			draws.Add((layout.GetType(), ProcessLayout(layout, await render.RenderAsync(FormulaPathHelper.View(layout.GetType()), layout))));
 			foreach (var page in pages)
-				draws.Add((page.GetType(), ProcessPage(page.GetType(), await render.RenderAsync(FormulaPathHelper.View(page.GetType()), page))));
+				draws.Add((page.GetType(), ProcessPage(page, await render.RenderAsync(FormulaPathHelper.View(page.GetType()), page))));
 
 			var doc = new HtmlDocument();
 			doc.LoadHtml(draws[0].html);
@@ -61,26 +62,30 @@ namespace Formula.Tools
 
 			return doc.DocumentNode.OuterHtml;
 		}
-		static string ProcessLayout(Type layoutType, string layoutHtml)
+		static string ProcessLayout(BaseLayout layout, string layoutHtml)
 		{
-			string layoutDir = FormulaPathHelper.GetLayoutDir(layoutType);
+			string layoutDir = FormulaPathHelper.GetLayoutDir(layout.GetType());
 
 			List<string> styleStrings = StyleTool.GetStyleElementStrings(layoutDir, true);
 			StringBuilder sb = new StringBuilder();
 			foreach (string styleString in styleStrings)
 				sb.Append(styleString);
 
-			return $"<ff-layout ff-name='{FormulaPathHelper.LayoutName(layoutType)}'>{sb.ToString()}{layoutHtml}</ff-layout>";
+			string variantJson = JsonConvert.SerializeObject(layout.Variant);
+			string variant = layout.Variant != null ? Convert.ToBase64String(Encoding.UTF8.GetBytes(variantJson)) : "";
+			return $"<ff-layout ff-name='{FormulaPathHelper.LayoutName(layout.GetType())}' ff-variant='{variant}'>{sb.ToString()}{layoutHtml}</ff-layout>";
 		}
-		static string ProcessPage(Type pageType, string layoutHtml)
+		static string ProcessPage(BasePage page, string layoutHtml)
 		{
-			string pageDir = FormulaPathHelper.GetPageDir(pageType);
+			string pageDir = FormulaPathHelper.GetPageDir(page.GetType());
 			List<string> styleStrings = StyleTool.GetStyleElementStrings(pageDir, false);
 			StringBuilder sb = new StringBuilder();
 			foreach (string style in styleStrings)
 				sb.Append(style);
 
-			return $"<ff-page ff-name='{FormulaPathHelper.PageName(pageType)}'>{sb.ToString()}{layoutHtml}</ff-page>";
+			string variantJson = JsonConvert.SerializeObject(page.Variant);
+			string variant = page.Variant != null ? Convert.ToBase64String(Encoding.UTF8.GetBytes(variantJson)) : "";
+			return $"<ff-page ff-name='{FormulaPathHelper.PageName(page.GetType())}' ff-variant='{variant}'>{sb}{layoutHtml}</ff-page>";
 		}
 		public static void InsertWebObjectStyles(HtmlNode webobjectStyleDiv, HashSet<string> webObjectNames)
 		{
