@@ -2,7 +2,6 @@
 This engine namespace is used by the framework. 
 Developers shouldn't use this.
 */
-
 export namespace Engine
 {
 	export class CoreManager
@@ -12,7 +11,7 @@ export namespace Engine
 		miscMGR: MiscManager;
 		viewControllerMGR: ViewControllerManager;
 		webobjectMGR: WebObjectManager;
-		rData: Items.RData;
+		pageData: Items.PageData;
 		observer: MutationObserver;
 
 		constructor()
@@ -27,13 +26,13 @@ export namespace Engine
 		}
 		async start()
 		{
-			var $rData = document.querySelector("#ff-rdata");
-			this.rData = Utility.createRDataObj($rData);
-			this.miscMGR.initialize(this.rData.ff_appversion, this.rData.ff_cdn);
+			var $pageData = document.querySelector("#ff-pagedata");
+			this.pageData = Utility.createPageDataObj($pageData);
+			this.miscMGR.initialize(this.pageData.ff_appversion);
 			if (location.hash)
 				Utility.scrollToHash(location.hash);
 
-			await Utility.loadJavascriptFromRData(this.rData, async () =>
+			await Utility.loadJavascriptFromPageData(this.pageData, async () =>
 			{
 				var $appElement: HTMLElement = document.querySelector("ff-app");
 				Utility.preProcessHtml($appElement);
@@ -48,6 +47,8 @@ export namespace Engine
 
 				this.observer.observe($appElement, { childList: true, subtree: true });
 				(<Events.IPrivateEventHandler><any>events.onAnimatingDone).eventhandler.fireEvent();
+				this.miscMGR.exitPreloaderScreen();
+
 			});
 		}
 		onMutation(mutations: MutationRecord[])
@@ -400,59 +401,59 @@ export namespace Engine
 			var div = document.createElement('div');
 			div.innerHTML = httpRequest.response;
 			var $newViewCtrl = <HTMLElement>div.children.item(0);
-			var rDataDiv = div.children.item(1);
+			var pageDataDiv = div.children.item(1);
 
 			if ($newViewCtrl == null || !($newViewCtrl.tagName == "FF-PAGE" || $newViewCtrl.tagName == "FF-LAYOUT") ||
-				rDataDiv == null || rDataDiv.getAttribute("id") != "ff-rdata" ||
+				pageDataDiv == null || pageDataDiv.getAttribute("id") != "ff-pagedata" ||
 				(httpRequest.status >= 500 && httpRequest.status < 600))
 			{
 				this.setState(HistoryManager.State.Idle);
 				throw "An unexpected error happened on the server.";
 			}
 
-			coreMGR.rData = Utility.createRDataObj(rDataDiv);
-			if (coreMGR.rData.ff_appversion !== coreMGR.miscMGR.appVersion)
+			coreMGR.pageData = Utility.createPageDataObj(pageDataDiv);
+			if (coreMGR.pageData.ff_appversion !== coreMGR.miscMGR.appVersion)
 			{
 				location.reload();
 				return;
 			}
 
-			await this.SPAPageChange3_LoadJavascript(httpRequest, $newViewCtrl, coreMGR.rData, changePageId);
+			await this.SPAPageChange3_LoadJavascript(httpRequest, $newViewCtrl, coreMGR.pageData, changePageId);
 		}
-		private async SPAPageChange3_LoadJavascript(httpRequest: XMLHttpRequest, $newViewCtrl: HTMLElement, rData: Items.RData, changePageId: number)
+		private async SPAPageChange3_LoadJavascript(httpRequest: XMLHttpRequest, $newViewCtrl: HTMLElement, pageData: Items.PageData, changePageId: number)
 		{
 			//TODO: put await on it?
-			await Utility.loadJavascriptFromRData(rData, async () =>
+			await Utility.loadJavascriptFromPageData(pageData, async () =>
 			{
 				if (this.changePageId != changePageId)
 					return;
-				await this.SPAPageChange4_UpdateStyleDOM(httpRequest, $newViewCtrl, rData);
+				await this.SPAPageChange4_UpdateStyleDOM(httpRequest, $newViewCtrl, pageData);
 			});
 		}
 
-		private async SPAPageChange4_UpdateStyleDOM(httpRequest: XMLHttpRequest, $newViewCtrl: HTMLElement, rData: Items.RData)
+		private async SPAPageChange4_UpdateStyleDOM(httpRequest: XMLHttpRequest, $newViewCtrl: HTMLElement, pageData: Items.PageData)
 		{
 			//console.log("SPAPageChange5_UpdateStyleDOM");
 			//console.log(newHtml);
-			//console.log(rData);
+			//console.log(pageData);
 
 			var $webobjStyleDiv = document.getElementById("ff-webobject-styles");
-			for (var i = 0; i < rData.ff_webobjectstyles.length; i++)
+			for (var i = 0; i < pageData.ff_webobjectstyles.length; i++)
 			{
-				var styleElement = this.createElementFromHTML(rData.ff_webobjectstyles[i]);
+				var styleElement = this.createElementFromHTML(pageData.ff_webobjectstyles[i]);
 				$webobjStyleDiv.appendChild(styleElement);
 			}
 
-			await this.SPAPageChange5_UpdateNewHtmlDOM(httpRequest, $newViewCtrl, rData);
+			await this.SPAPageChange5_UpdateNewHtmlDOM(httpRequest, $newViewCtrl, pageData);
 		}
-		private async SPAPageChange5_UpdateNewHtmlDOM(httpRequest: XMLHttpRequest, $newViewCtrl: HTMLElement, rData: Items.RData)
+		private async SPAPageChange5_UpdateNewHtmlDOM(httpRequest: XMLHttpRequest, $newViewCtrl: HTMLElement, pageData: Items.PageData)
 		{
 			var $rcCtrl: Element;
-			if (rData.ff_targetfoldertype == "page")
-				$rcCtrl = document.querySelector("ff-page[ff-name='" + rData.ff_targetfolderpagename + "']");
-			else if (rData.ff_targetfoldertype == "layout")
+			if (pageData.ff_targetfoldertype == "page")
+				$rcCtrl = document.querySelector("ff-page[ff-name='" + pageData.ff_targetfolderpagename + "']");
+			else if (pageData.ff_targetfoldertype == "layout")
 				$rcCtrl = document.querySelector("ff-layout");
-			else if (rData.ff_targetfoldertype == "app")
+			else if (pageData.ff_targetfoldertype == "app")
 				$rcCtrl = document.querySelector("ff-app");
 			else
 				throw "No other targetfoldertype";
@@ -513,13 +514,13 @@ export namespace Engine
 				}
 			}, this.shallAnimate == true ? this.animateMs : 0);
 
-			this.SPAPageChange6_LastCode(httpRequest, rData, $rcFolder, $newViewCtrl);
+			this.SPAPageChange6_LastCode(httpRequest, pageData, $rcFolder, $newViewCtrl);
 		}
-		private SPAPageChange6_LastCode(httpRequest: XMLHttpRequest, rData: Items.RData, $rcFolder: HTMLElement, $newViewCtrl: HTMLElement)
+		private SPAPageChange6_LastCode(httpRequest: XMLHttpRequest, pageData: Items.PageData, $rcFolder: HTMLElement, $newViewCtrl: HTMLElement)
 		{
 			//console.log("SPAPageChange6_LastCode()")
 
-			document.title = rData.ff_title;
+			document.title = pageData.ff_title;
 			this.curShowingHistoryId = this.curHistoryId;
 			(<Events.IPrivateEventHandler><any>events.onChangePageDone).eventhandler.fireEvent($newViewCtrl);
 
@@ -535,7 +536,7 @@ export namespace Engine
 					Utility.scrollLayoutAndPageScrollYObjects((<HistoryManager.HistoryData>this.historyData[this.curHistoryId.toString()]).scrollYObjects);
 				else
 				{
-					Utility.scrollToTarget($rcFolder, rData.ff_scrollyextraspace != null ? rData.ff_scrollyextraspace : 0, true);
+					Utility.scrollToTarget($rcFolder, pageData.ff_scrollyextraspace != null ? pageData.ff_scrollyextraspace : 0, true);
 				}
 			}
 		}
@@ -1006,7 +1007,6 @@ export namespace Engine
 	export class MiscManager
 	{
 		appVersion: number;
-		cdn: string;
 		isSmoothScrollSupported: boolean;
 		hashScrollExtraSpace: number;
 		uId: number;
@@ -1017,15 +1017,23 @@ export namespace Engine
 			this.hashScrollExtraSpace = 0;
 			this.uId = 0;
 		}
-		initialize(appVersion: number, cdn: string)
+		initialize(appVersion: number)
 		{
 			this.appVersion = appVersion;
-			this.cdn = cdn;
 		}
 		createUId()
 		{
 			this.uId++;
 			return this.uId.toString();
+		}
+		exitPreloaderScreen()
+		{
+			var $preloaderScreen = document.querySelector("#ff-app-preloader-screen");
+			$preloaderScreen.classList.add("ff-preloader-screen-exit");
+			setTimeout(() =>
+			{
+				$preloaderScreen.remove();
+			},200);
 		}
 	}
 	export namespace MiscManager
@@ -1069,25 +1077,7 @@ export namespace Engine
 
 		async createApp($appElement: HTMLElement)
 		{
-			let module = null;
-			try
-			{
-				//reason why we make variable here, is because gulp madge library will 
-				//set app.js as a depedency if it sees it in the import("xxx") statement
-				var src = '/app/app.js';
-				module = await import(src);
-			}
-			catch (e)
-			{
-				//TODO show exception page
-				console.log(e);
-			}
-
-			new module.InitializeApp();
-			var app = module.app;
-
-			//TODO: make sure its instance of BaseApp, after we made it to JsModules, this bugs....
-			//console.log(app);
+			var app = await this.getApp();
 			if (app instanceof BaseApp == false)
 				throw "App class must be extended from th.BaseApp";
 
@@ -1095,14 +1085,21 @@ export namespace Engine
 			app.$element["ff-ref"] = app;
 			app.id = coreMGR.miscMGR.createUId();
 			if ("thAwake" in app)
-				(<any>app).thAwake();
+				app.thAwake();
 		}
 		async startApp()
 		{
+			var app = await this.getApp();
+			if ("thStart" in app)
+				app.thStart();
+		}
+		async getApp()
+		{
+			//reason why we make variable here, is because gulp madge library will 
+			//set app.js as a depedency if it sees it in the import("xxx") statement
 			var src = '/app/app.js';
 			let module = await import(src);
-			if ("thStart" in module.app)
-				(<any>module.app).thStart();
+			return module.app;
 		}
 		createViewControllers($parentElement: HTMLElement)
 		{
@@ -1400,17 +1397,17 @@ export namespace Engine
 					subscribeATagOnClick($aTags.item(i));
 			}
 		}
-		static getPolyfillsScripts(rData: Items.RData): string[]
+		static getPolyfillsScripts(pageData: Items.PageData): string[]
 		{
-			if (rData.ff_polyfills == null)
+			if (pageData.ff_polyfills == null)
 				return null;
 
 			var polyfillScripts: string[] = [];
-			if (rData.ff_polyfills)
+			if (pageData.ff_polyfills)
 			{
-				if (rData.ff_polyfills.evaluation != null)
+				if (pageData.ff_polyfills.evaluation != null)
 				{
-					var evalItems = rData.ff_polyfills.evaluation;
+					var evalItems = pageData.ff_polyfills.evaluation;
 					for (let i = 0; i < evalItems.length; i++)
 					{
 						var evalItem = evalItems[i];
@@ -1422,10 +1419,10 @@ export namespace Engine
 					}
 				}
 
-				if (rData.ff_polyfills.modernizr && window["Modernizr"])
+				if (pageData.ff_polyfills.modernizr && window["Modernizr"])
 				{
 					var modernizr = window["Modernizr"];
-					var modItems = rData.ff_polyfills.modernizr;
+					var modItems = pageData.ff_polyfills.modernizr;
 					for (let i = 0; i < modItems.length; i++)
 					{
 						let modItem = modItems[i];
@@ -1450,9 +1447,9 @@ export namespace Engine
 				return polyfillScripts;
 			}
 		}
-		static async loadJavascriptFromRData(rData: Items.RData, onDone?: () => void)
+		static async loadJavascriptFromPageData(pageData: Items.PageData, onDone?: () => void)
 		{
-			var scripts = rData.ff_scripts;
+			var scripts = pageData.ff_scripts;
 			var srcs: Items.ScriptItem[] = [];
 			for (let i = 0; i < scripts.length; i++)
 			{
@@ -1462,7 +1459,7 @@ export namespace Engine
 				});
 			}
 
-			var polyfillScripts: string[] = this.getPolyfillsScripts(rData);
+			var polyfillScripts: string[] = this.getPolyfillsScripts(pageData);
 			if (polyfillScripts != null)
 			{
 				for (let i = 0; i < polyfillScripts.length; i++)
@@ -1491,9 +1488,9 @@ export namespace Engine
 					onDone();
 			});
 		}
-		static createRDataObj($rData: Element): Items.RData
+		static createPageDataObj($pageData: Element): Items.PageData
 		{
-			var jsonText = atob($rData.getAttribute("data-x"))
+			var jsonText = atob($pageData.getAttribute("data-x"))
 			return JSON.parse(jsonText);
 		}
 		static getClassObjFromString(fullName: string): any
@@ -1962,9 +1959,9 @@ export namespace Items
 		isModule: boolean;
 	}
 	/**
-	The RData which contains many of the variables sent back from the server
+	The PageData which contains many of the variables sent back from the server
 	*/
-	export interface RData
+	export interface PageData
 	{
 		ff_appversion: number;
 		ff_scripts: ScriptItem[];
@@ -1975,7 +1972,6 @@ export namespace Items
 		ff_redirect: string;
 		ff_scrollyextraspace: number;
 		ff_polyfills: Polyfills;
-		ff_cdn: string;
 	}
 	export interface IProgressBar
 	{
@@ -2000,11 +1996,11 @@ Developer shouldn't be using this.
 */
 export var coreMGR: Engine.CoreManager;
 /**
-The RData which contains many of the variables sent back from the server
+The PageDat which contains many of the variables sent back from the server
 */
-export function getRData(): Items.RData
+export function getPageData(): Items.PageData
 {
-	return this.coreMGR.rData;
+	return coreMGR.pageData;
 }
 export function start()
 {
@@ -2064,10 +2060,7 @@ export function initObjects($parentObj: HTMLElement)
 document.onreadystatechange = async function ()
 {
 	if (document.readyState === "complete")
-	{
-		console.log("start");
 		await start();
-	}
 };
 
 

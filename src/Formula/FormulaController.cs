@@ -29,7 +29,7 @@ namespace Formula
 		static async Task<string> GetHtmlByRequest(HttpContext httpContext)
 		{
 			var path = HttpUtility.UrlDecode(httpContext.Request.Path);
-			FormulaContext context = CreatePageData(httpContext, path);
+			FormulaContext context = CreateFormulaContext(httpContext, path);
 			if (context == null)
 				throw new Exception($"{context.GetType().FullName} couldn't be created");
 
@@ -38,7 +38,7 @@ namespace Formula
 			DrawResult drawResult = DrawResultServices.GetDrawResult(pageType);
 			return await DrawProcessor.Process(drawResult, context);
 		}
-		public static FormulaContext CreatePageData(HttpContext context, string path)
+		public static FormulaContext CreateFormulaContext(HttpContext context, string path)
 		{
 			bool isFirstPageLoad = !context.Request.Headers.ContainsKey("ff_layout");
 			if(isFirstPageLoad == false)

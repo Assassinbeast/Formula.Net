@@ -144,13 +144,13 @@ namespace Formula.Processing
 			{
 				FormulaHtmlDrawer.InsertWebObjectStyles(htmlDoc.GetElementbyId("ff-webobject-styles"), drawingWebObjects);
 				var body = htmlDoc.DocumentNode.SelectSingleNode("//body");
-				body.AppendChild(HtmlNode.CreateNode(FormulaHtmlDrawer.DrawRData(context)));
+				body.AppendChild(HtmlNode.CreateNode(FormulaHtmlDrawer.DrawPageData(context)));
 
 				return htmlDoc.DocumentNode.OuterHtml;
 			}
 			else //SPA-Load
 			{
-				return htmlDoc.DocumentNode.OuterHtml + FormulaHtmlDrawer.DrawRData(context);
+				return htmlDoc.DocumentNode.OuterHtml + FormulaHtmlDrawer.DrawPageData(context);
 			}
 			#endregion
 
@@ -227,7 +227,7 @@ namespace Formula.Processing
 			{
 				var redirectDraw = (LogicActions.RedirectDraw)logicAction;
 				DrawResult drawResult = DrawResultServices.GetDrawResult(redirectDraw.PageType);
-				return await Process(drawResult, FormulaController.CreatePageData(
+				return await Process(drawResult, FormulaController.CreateFormulaContext(
 					context.HttpContext, context.Path));
 			}
 			throw new System.ArgumentException("Fatal error in the Formula framework");

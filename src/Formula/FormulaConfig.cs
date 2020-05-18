@@ -45,9 +45,11 @@ namespace Formula
 		/// If it exceeds the maximum limit, then the webapp will throw an exception.
 		/// </summary>
 		public int? MaxInternalRedirectCount;
-
+		/// <summary>
+		/// Used so the engine knows where the root Page/Layout namespaces are.
+		/// </summary>
 		public string DefaultNamespace { get; set; }
-
+		
 
 		/// <param name="appAssembly">Specify where your Formula Pages in your app are located</param>
 		/// <param name="appVersion">The AppVersion when publishing to production. 
@@ -59,6 +61,7 @@ namespace Formula
 		/// <param name="defaultLayout">Specify the default Layout that pages will use as a Layout.
 		/// Its required even if you only have one Layout</param>
 		/// <param name="getPageCallback">Specify your callback function that will set a page to draw</param>
+		/// <param name="defaultNamespace">Used so the engine knows where the root Page/Layout namespaces are. Value can be eg: 'Contoso.Web'</param>
 		public FormulaConfigArg(Assembly appAssembly, int appVersion, Type defaultLayout, string defaultNamespace)
 		{
 			if (appAssembly == null)

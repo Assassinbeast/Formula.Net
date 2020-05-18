@@ -38,8 +38,8 @@ namespace Formula
 		{
 			if (this.IsFirstPageLoad)
 				return; //No need for this header
-			this.RData["ff_targetfoldertype"] = folderType.ToString().ToLowerInvariant();
-			this.RData["ff_targetfolderpagename"] = rcTargetFolderPageName;
+			this.PageData["ff_targetfoldertype"] = folderType.ToString().ToLowerInvariant();
+			this.PageData["ff_targetfolderpagename"] = rcTargetFolderPageName;
 		}
 
 		public string Title => FinalPage.GenerateFullTitle();
@@ -90,29 +90,29 @@ namespace Formula
 			this.DrawnWebObjects = drawnWebObjects;
 		}
 
-		internal Dictionary<string, object> RData = new Dictionary<string, object>();
-		internal string GetRData()
+		internal Dictionary<string, object> PageData = new Dictionary<string, object>();
+		internal string GetPageData()
 		{
-			this.RData.Add("ff_appversion", FormulaConfig.AppVersion);
-			this.RData.Add("ff_scripts", this.Scripts.Select(x=>x.Value).ToList());
+			this.PageData.Add("ff_appversion", FormulaConfig.AppVersion);
+			this.PageData.Add("ff_scripts", this.Scripts.Select(x=>x.Value).ToList());
 
 			if (this.IsFirstPageLoad == true)
 			{
-				this.RData.Add("ff_polyfills", Utility.Polyfill.GetPolyfills(this));
+				this.PageData.Add("ff_polyfills", Utility.Polyfill.GetPolyfills(this));
 			}
 			else // SPA load
 			{
-				this.RData.Add("ff_title", this.Title);
+				this.PageData.Add("ff_title", this.Title);
 				//If First Page load, then it will be set in the html in the #ff-webobject-styles element in the DrawProcessor.cs
-				this.RData.Add("ff_webobjectstyles", this.WebObjectStyles); 
+				this.PageData.Add("ff_webobjectstyles", this.WebObjectStyles); 
 			}
 
-			string x = JsonConvert.SerializeObject(RData, EngineItems.JsonSettings);
+			string x = JsonConvert.SerializeObject(PageData, EngineItems.JsonSettings);
 			return System.Convert.ToBase64String(Encoding.UTF8.GetBytes(x));
 		}
-		public void AddRData(string key, object value)
+		public void AddPageData(string key, object value)
 		{
-			this.RData.Add(key, value);
+			this.PageData.Add(key, value);
 		}
 	}
 

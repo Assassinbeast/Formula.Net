@@ -35,7 +35,7 @@ namespace Formula
 		public void SetScrollYExtraSpace(int pixels)
 		{
 			if (this.Context.IsFirstPageLoad == false)
-				this.Context.AddRData("ff_scrollyextraspace", pixels);
+				this.Context.AddPageData("ff_scrollyextraspace", pixels);
 		}
 	}
 }

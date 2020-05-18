@@ -1,4 +1,4 @@
-﻿@*@model Contoso.App.AppController*@
+﻿@model Identhorize.Web.Playground.App.AppController
 @using System.Text.Encodings.Web;
 @using Microsoft.AspNetCore.Http.Extensions
 
@@ -9,6 +9,7 @@
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+	@*Make sure javascript is turned on and browser support modules*@
 	<noscript><meta http-equiv="refresh" content="0; URL=/noscript.html?redirect=@System.Web.HttpUtility.UrlEncode(Model.Context.HttpContext.Request.GetEncodedPathAndQuery())" /></noscript>
 	<script nomodule src="/nomdule.js"></script>
 
@@ -25,18 +26,16 @@
 	<script type="module" src="/formula/formula.js"></script>
 	<script defer src="/formula/modernizr.js"></script>
 
-	<script>
-		//TODO. show loading screen
-	</script>
-
 </head>
 <body style="margin:0">
-	<div class="ff-loading-screen"></div>
+	@{await Html.RenderPartialAsync("/App/AppPreloader.cshtml");}
+	
 	<ff-app>
 		<ff-folder>
 		</ff-folder>
 	</ff-app>
 	<div id="ff-webobject-styles"></div>
+
 	<script>
 		window.onerror = function (errorMsg, file, lineNumber, column, error)
 		{
@@ -67,23 +66,23 @@
 			script.async = true;
 			script.src = '/browser-support-detection.js';
 		})
-		.then(function ()
-		{
-			if (window["isAsyncAwaitSupported"] == null ||
-				window["isDynamicImportSupported"] == null)
-				window.location.href = "/outdated-browser.html";
-		})
-		.catch(function ()
-		{
-			throw "/browser-support-detection.js failed to load"
-		});
-
+			.then(function ()
+			{
+				if (window["isAsyncAwaitSupported"] == null ||
+					window["isDynamicImportSupported"] == null)
+					window.location.href = "/outdated-browser.html";
+			})
+			.catch(function ()
+			{
+				throw "/browser-support-detection.js failed to load"
+			});
 
 	</script>
 	<div id="ff-exception">
 		<h1>Application error</h1>
 		<p>Open Developer Tools by click f12 for more info</p>
 	</div>
+
 	<link rel="stylesheet" async href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
 </body>
 </html>
