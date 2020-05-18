@@ -99,7 +99,6 @@ namespace Formula
 			if (this.IsFirstPageLoad == true)
 			{
 				this.RData.Add("ff_polyfills", Utility.Polyfill.GetPolyfills(this));
-				this.RData.Add("ff_cdn", FormulaConfig.Cdn);
 			}
 			else // SPA load
 			{

@@ -31,18 +31,6 @@ namespace Formula
 		/// </summary>
 		public Func<string, string> FullTitleGenerationFunc;
 		/// <summary>
-		/// Your own Cdn. If your webapp is called Contoso, and you are using azure Cdn,
-		/// then your cdn root path to your files could be https://contoso.azureedge.net/formulafiles .
-		/// Then if you have a localfile in wwwroot/app/app.js, then your cdn file should be under
-		/// https://contoso.azureedge.net/formulafiles/app/app.js
-		/// The Formula framework will try to download the file from the Cdn first, and if it
-		/// fails, it will try to download it from your local server under the wwwroot.
-		/// When developing, you might not want to use your Cdn (because it might not be up-to-date when you build with gulp)
-		/// So a good tip to set the value could is something like: 
-		/// Cdn = env.IsDevelopment() ? null : "https://contoso.azureedge.net/formulafiles"
-		/// </summary>
-		public string Cdn;
-		/// <summary>
 		/// The AppVersion of your webapp.
 		/// Used if you want to update you webapplication and publish it.
 		/// Then if some clients have an older version, eg. version 1, and you updated it
@@ -93,7 +81,6 @@ namespace Formula
 		public static Type RootPageType{ get; private set; }
 		public static Type DefaultLayoutType { get; private set; }
 		public static string BaseTitle { get; private set; }
-		public static string Cdn { get; private set; }
 		public static int MaxRedirectCount { get; private set; }
 		public static Func<string, string> FullTitleGenerationFunc { get; private set; }
 		/// <summary>
@@ -112,7 +99,6 @@ namespace Formula
 			AppType = GetAppType(config.AppAssembly);
 			DefaultLayoutType = config.DefaultLayout;
 			BaseTitle = config.BaseTitle ?? Assembly.GetEntryAssembly().GetName().Name;
-			Cdn = config.Cdn?.TrimEnd('/');
 			MaxRedirectCount = config.MaxInternalRedirectCount ?? 3;
 			FullTitleGenerationFunc = config.FullTitleGenerationFunc ?? StandardFunctions.StandardFullTitleGenerationFunc;
 			DefaultNamespace = config.DefaultNamespace;
