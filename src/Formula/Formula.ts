@@ -12,6 +12,7 @@ export namespace Engine
 		viewControllerMGR: ViewControllerManager;
 		webobjectMGR: WebObjectManager;
 		pageData: Items.PageData;
+		appData: Items.AppData;
 		observer: MutationObserver;
 
 		constructor()
@@ -28,7 +29,9 @@ export namespace Engine
 		{
 			var $pageData = document.querySelector("#ff-pagedata");
 			this.pageData = Utility.createPageDataObj($pageData);
-			this.miscMGR.initialize(this.pageData.ff_appversion);
+
+			var $appData = document.querySelector("#ff-appdata");
+			this.appData = Utility.createAppDataObj($appData);
 			if (location.hash)
 				Utility.scrollToHash(location.hash);
 
@@ -36,9 +39,8 @@ export namespace Engine
 			{
 				var $appElement: HTMLElement = document.querySelector("ff-app");
 				Utility.preProcessHtml($appElement);
-
 				await coreMGR.viewControllerMGR.createApp($appElement);
-				coreMGR.viewControllerMGR.createViewControllers($appElement);
+				await coreMGR.viewControllerMGR.createViewControllers($appElement);
 				await coreMGR.webobjectMGR.createWebObjects($appElement);
 
 				await coreMGR.viewControllerMGR.startApp();
@@ -361,9 +363,6 @@ export namespace Engine
 			var urlItems: Utility.UrlItems = Utility.getUrlItems(href);
 			var urlItemsString = Utility.getHrefByUrlItems(urlItems);
 			xhr.open("GET", urlItemsString == "" ? "/" : urlItemsString, true);
-			xhr.setRequestHeader("ff_layout", pageRequestHeaders.layout);
-			xhr.setRequestHeader("ff_pages", JSON.stringify(pageRequestHeaders.pages));
-			xhr.setRequestHeader("ff_webobjects", JSON.stringify(pageRequestHeaders.webobjects));
 
 			this.setState(HistoryManager.State.Idle);
 			this.setState(HistoryManager.State.Changing);
@@ -383,85 +382,126 @@ export namespace Engine
 				"Either the server is down or your device has lost internet connection";
 			}
 
+			//TODO: delete?
 			if (httpRequest.getResponseHeader("ff_redirect") == "true")
 			{
 				let location = httpRequest.getResponseHeader("location");
 				this.linkClick(location);
 				return;
 			}
+			
+			var htmlText = httpRequest.response; //<ff-html></ff-head>...</ff-head><ff-body>..</ff-body></ff-html>
+			let htmlElement: DocumentFragment = this.transformHtmlTextToFormulaElement(htmlText);
 
-			var startResponse = (<string>httpRequest.response).trim().substr(0, 9).toLowerCase()
-			//If the response is a whole new html page
-			if (startResponse.substr(0, 9) == "<!doctype" || startResponse.substr(0, 5) == "<html")
+			//Get pagedata
+			//Get javascripts
+			//Get title
+			//Get webobject styles
+			//Get layout/page element
+
+			let $appData = htmlElement.querySelector("#ff-appdata");
+			let $pageData = htmlElement.querySelector("#ff-pagedata");
+			let $title = htmlElement.querySelector("title");
+			let $webobjectStyles = htmlElement.querySelector("#ff-webobject-styles");
+
+			let $layout = htmlElement.querySelector("ff-layout");
+			let $pages = htmlElement.querySelectorAll("ff-page");
+
+			let $targetNewViewController = null;
+			let $targetDeleteViewController = null;
+			if ($layout.getAttribute("ff-name") != coreMGR.viewControllerMGR.$layout.getAttribute("ff-name") ||
+				$layout.getAttribute("ff-variant") != coreMGR.viewControllerMGR.$layout.getAttribute("ff-variant"))
 			{
-				Utility.destroyApp(httpRequest.response);
-				return;
+				$targetNewViewController = $layout;
+				$targetDeleteViewController = coreMGR.viewControllerMGR.$layout;
 			}
 
-			var div = document.createElement('div');
-			div.innerHTML = httpRequest.response;
-			var $newViewCtrl = <HTMLElement>div.children.item(0);
-			var pageDataDiv = div.children.item(1);
+			if ($targetNewViewController == null)
+			{
+				var curPageCount = Object.keys(coreMGR.viewControllerMGR.$pages).length;
+				for (let i = 0; i < $pages.length; i++)
+				{
+					var pageName = Object.keys(coreMGR.viewControllerMGR.$pages)[i];
+					var $curPage = coreMGR.viewControllerMGR.$pages[pageName];
 
-			if ($newViewCtrl == null || !($newViewCtrl.tagName == "FF-PAGE" || $newViewCtrl.tagName == "FF-LAYOUT") ||
-				pageDataDiv == null || pageDataDiv.getAttribute("id") != "ff-pagedata" ||
-				(httpRequest.status >= 500 && httpRequest.status < 600))
+					let $page = $pages[i];
+					if ($page.getAttribute("ff-name") != $curPage.getAttribute("ff-name") ||
+						$page.getAttribute("ff-variant") != $curPage.getAttribute("ff-variant") ||
+						i + 1 >= $pages.length || //always update the last segment of the page event if its the same
+						i + 1 >= curPageCount) //If the cur viewCtrlPage doesn't have more pages to loop through, then target here
+					{
+						$targetNewViewController = $page;
+						$targetDeleteViewController = $curPage;
+						break;
+					}
+				}
+			}
+
+			//TODO: delete? 500 doesn't exist in production
+			if (httpRequest.status >= 500 && httpRequest.status < 600)
 			{
 				this.setState(HistoryManager.State.Idle);
 				throw "An unexpected error happened on the server.";
 			}
 
-			coreMGR.pageData = Utility.createPageDataObj(pageDataDiv);
-			if (coreMGR.pageData.ff_appversion !== coreMGR.miscMGR.appVersion)
+			coreMGR.pageData = Utility.createPageDataObj($pageData);
+			let appData = Utility.createAppDataObj($appData);
+			if (coreMGR.appData.appVersion !== appData.appVersion)
 			{
-				location.reload();
+				location.reload(); //The webapplication updated while user was in the app, so now reload the whole site
 				return;
 			}
 
-			await this.SPAPageChange3_LoadJavascript(httpRequest, $newViewCtrl, coreMGR.pageData, changePageId);
+			let pageUpdateItems: HistoryManager.PageUpdateItems = {
+				$newViewController: $targetNewViewController,
+				$replacedViewController: $targetDeleteViewController,
+				$title: $title,
+				$webobjectStyles: <HTMLElement>$webobjectStyles,
+				appData: appData,
+				pageData: coreMGR.pageData
+			};
+			await this.SPAPageChange3_LoadJavascript(httpRequest, pageUpdateItems, changePageId);
 		}
-		private async SPAPageChange3_LoadJavascript(httpRequest: XMLHttpRequest, $newViewCtrl: HTMLElement, pageData: Items.PageData, changePageId: number)
+		private async SPAPageChange3_LoadJavascript(httpRequest: XMLHttpRequest, pageUpdateItems: HistoryManager.PageUpdateItems, changePageId: number)
 		{
 			//TODO: put await on it?
-			await Utility.loadJavascriptFromPageData(pageData, async () =>
+			await Utility.loadJavascriptFromPageData(pageUpdateItems.pageData, async () =>
 			{
 				if (this.changePageId != changePageId)
 					return;
-				await this.SPAPageChange4_UpdateStyleDOM(httpRequest, $newViewCtrl, pageData);
+				await this.SPAPageChange4_UpdateStyleDOM(httpRequest, pageUpdateItems);
 			});
 		}
 
-		private async SPAPageChange4_UpdateStyleDOM(httpRequest: XMLHttpRequest, $newViewCtrl: HTMLElement, pageData: Items.PageData)
+		private async SPAPageChange4_UpdateStyleDOM(httpRequest: XMLHttpRequest, pageUpdateItems: HistoryManager.PageUpdateItems)
 		{
 			//console.log("SPAPageChange5_UpdateStyleDOM");
 			//console.log(newHtml);
 			//console.log(pageData);
-
 			var $webobjStyleDiv = document.getElementById("ff-webobject-styles");
-			for (var i = 0; i < pageData.ff_webobjectstyles.length; i++)
+			var currentWebObjStyles: any = {};
+			for (let i = 0; i < $webobjStyleDiv.children.length; i++)
 			{
-				var styleElement = this.createElementFromHTML(pageData.ff_webobjectstyles[i]);
-				$webobjStyleDiv.appendChild(styleElement);
+				var $webObjstyle = $webobjStyleDiv.children.item(i);
+				currentWebObjStyles[$webObjstyle.getAttribute("ff-webobject-name")] = 1;
 			}
 
-			await this.SPAPageChange5_UpdateNewHtmlDOM(httpRequest, $newViewCtrl, pageData);
-		}
-		private async SPAPageChange5_UpdateNewHtmlDOM(httpRequest: XMLHttpRequest, $newViewCtrl: HTMLElement, pageData: Items.PageData)
-		{
-			var $rcCtrl: Element;
-			if (pageData.ff_targetfoldertype == "page")
-				$rcCtrl = document.querySelector("ff-page[ff-name='" + pageData.ff_targetfolderpagename + "']");
-			else if (pageData.ff_targetfoldertype == "layout")
-				$rcCtrl = document.querySelector("ff-layout");
-			else if (pageData.ff_targetfoldertype == "app")
-				$rcCtrl = document.querySelector("ff-app");
-			else
-				throw "No other targetfoldertype";
+			for (let i = 0; i < pageUpdateItems.$webobjectStyles.children.length; i++)
+			{
+				let $newWebObjStyle = pageUpdateItems.$webobjectStyles;
+				let newWebObjName = $newWebObjStyle.getAttribute("ff-webobject-name");
+				if (newWebObjName in currentWebObjStyles == false)
+					$webobjStyleDiv.appendChild($newWebObjStyle);
+			}
 
-			var $rcFolder: HTMLElement = $rcCtrl.querySelector("ff-folder");
+			await this.SPAPageChange5_UpdateNewHtmlDOM(httpRequest, pageUpdateItems);
+		}
+		private async SPAPageChange5_UpdateNewHtmlDOM(httpRequest: XMLHttpRequest, pageUpdateItems: HistoryManager.PageUpdateItems)
+		{
+			var $targetFolder: HTMLElement = pageUpdateItems.$replacedViewController.parentElement;
 
 			this.setCurrentScrollForInHistoryData(this.curShowingHistoryId);
-			var $deadViewCtrl: HTMLElement = <HTMLElement>$rcFolder.firstElementChild;
+			var $deadViewCtrl: HTMLElement = <HTMLElement>$targetFolder.firstElementChild;
 			var $dyingWebObjects = $deadViewCtrl.querySelectorAll("[ff-webobject]");
 			//console.log($dyingWebObjects);
 			for (var i = 0; i < $dyingWebObjects.length; i++)
@@ -477,20 +517,20 @@ export namespace Engine
 				$deadViewCtrl.appendChild(this.createElementFromHTML("<div class='ff-deadviewctrl-overlay'></div>"));
 			}
 			else
-				$rcFolder.removeChild($deadViewCtrl);
+				$targetFolder.removeChild($deadViewCtrl);
 
-			Utility.replaceDeadScriptsWithWorkingScripts($newViewCtrl);
+			Utility.replaceDeadScriptsWithWorkingScripts(pageUpdateItems.$newViewController);
 
 			if (this.shallAnimate == true)
-				$newViewCtrl.classList.add("ff-anim-enter");
-			$rcFolder.appendChild($newViewCtrl);
+				pageUpdateItems.$newViewController.classList.add("ff-anim-enter");
+			$targetFolder.appendChild(pageUpdateItems.$newViewController);
 
 			this.setState(HistoryManager.State.Animating);
 
-			Utility.preProcessHtml($newViewCtrl);
+			Utility.preProcessHtml(pageUpdateItems.$newViewController);
 
-			coreMGR.viewControllerMGR.createViewControllers($newViewCtrl);
-			await coreMGR.webobjectMGR.createWebObjects($newViewCtrl);
+			await coreMGR.viewControllerMGR.createViewControllers(pageUpdateItems.$newViewController);
+			await coreMGR.webobjectMGR.createWebObjects(pageUpdateItems.$newViewController);
 
 			coreMGR.viewControllerMGR.startUnstartedViewControllers();
 			coreMGR.webobjectMGR.startUnstartedWebObjects();
@@ -499,12 +539,12 @@ export namespace Engine
 			{
 				if (this.shallAnimate == true)
 				{
-					$newViewCtrl.classList.remove("ff-anim-enter");
-					$rcFolder.removeChild($deadViewCtrl);
+					pageUpdateItems.$newViewController.classList.remove("ff-anim-enter");
+					$targetFolder.removeChild($deadViewCtrl);
 				}
 				this.setState(HistoryManager.State.Idle);
 				(<Events.IPrivateEventHandler><any>events.onAnimatingDone).eventhandler.fireEvent();
-				HistoryManager.CssUtility.removeUnusuedWebObjectCss();
+				HistoryManager.CssUtility.removeUnusedWebObjectCss();
 
 				if (this.nextActionFuncAfterAnimating != null)
 				{
@@ -514,15 +554,15 @@ export namespace Engine
 				}
 			}, this.shallAnimate == true ? this.animateMs : 0);
 
-			this.SPAPageChange6_LastCode(httpRequest, pageData, $rcFolder, $newViewCtrl);
+			this.SPAPageChange6_LastCode(httpRequest, pageUpdateItems, $targetFolder);
 		}
-		private SPAPageChange6_LastCode(httpRequest: XMLHttpRequest, pageData: Items.PageData, $rcFolder: HTMLElement, $newViewCtrl: HTMLElement)
+		private SPAPageChange6_LastCode(httpRequest: XMLHttpRequest, pageUpdateItems: HistoryManager.PageUpdateItems, $rcFolder: HTMLElement)
 		{
 			//console.log("SPAPageChange6_LastCode()")
 
-			document.title = pageData.ff_title;
+			document.title = pageUpdateItems.$title.innerText;
 			this.curShowingHistoryId = this.curHistoryId;
-			(<Events.IPrivateEventHandler><any>events.onChangePageDone).eventhandler.fireEvent($newViewCtrl);
+			(<Events.IPrivateEventHandler><any>events.onChangePageDone).eventhandler.fireEvent(pageUpdateItems.$newViewController);
 
 			if (window.location.hash)
 			{
@@ -536,7 +576,7 @@ export namespace Engine
 					Utility.scrollLayoutAndPageScrollYObjects((<HistoryManager.HistoryData>this.historyData[this.curHistoryId.toString()]).scrollYObjects);
 				else
 				{
-					Utility.scrollToTarget($rcFolder, pageData.ff_scrollyextraspace != null ? pageData.ff_scrollyextraspace : 0, true);
+					Utility.scrollToTarget($rcFolder, pageUpdateItems.pageData.ff_scrollyextraspace != null ? pageUpdateItems.pageData.ff_scrollyextraspace : 0, true);
 				}
 			}
 		}
@@ -743,162 +783,29 @@ export namespace Engine
 				return true;
 			}
 		}
+
+		transformHtmlTextToFormulaElement(htmlText)
+		{
+			var start = htmlText.indexOf("<html");
+			htmlText = htmlText.substring(start);
+			htmlText = htmlText.replace("<html", "<ff-html");
+			htmlText = htmlText.replace("</html>", "</ff-html>");
+			htmlText = htmlText.replace("<head", "<ff-head");
+			htmlText = htmlText.replace("</head>", "</ff-head>");
+			htmlText = htmlText.replace("<body", "<ff-body");
+			htmlText = htmlText.replace("</body>", "</ff-body>");
+			htmlText = htmlText.trim();
+
+			var template = document.createElement('template');
+			template.innerHTML = htmlText;
+			return template.content;
+		}
 	}
 	export namespace HistoryManager
 	{
 		export class CssUtility
 		{
-			static getDeletingStyles(ctrlType: string, pageName?: string): any
-			{
-				var rcElements: MiscManager.RcElements = HistoryManager.CssUtility.getUniqueRcElementsUnderCtrlType(ctrlType, pageName);
-				var allCurCss: string[] = HistoryManager.CssUtility.getAllCurrentCss();
-
-				//console.log(allCurCss);
-
-				var cssLayoutDir: string;
-				if (rcElements.layout != null)
-					cssLayoutDir = HistoryManager.CssUtility.getCssFilePathDir("layout", rcElements.layout);
-
-				var cssPageDirs: string[] = [];
-				for (var prop in rcElements.pages)
-					cssPageDirs.push(HistoryManager.CssUtility.getCssFilePathDir("page", prop));
-
-				var cssWebObjectDirs: string[] = [];
-				for (var prop in rcElements.webobjects)
-					cssWebObjectDirs.push(HistoryManager.CssUtility.getCssFilePathDir("webobject", prop));
-
-				//console.log(cssLayoutDir);
-				//console.log(cssPageDirs);
-				//console.log(cssWebObjectDirs);
-
-				var deletingStyles: any = {}
-
-				//Add layout css to deletingStyles
-				if (cssLayoutDir != null)
-				{
-					for (var i = 0; i < allCurCss.length; i++)
-						if (allCurCss[i].substr(0, cssLayoutDir.length) == cssLayoutDir)
-							deletingStyles[allCurCss[i]] = null;
-				}
-
-
-				//Add pages css to deletingStyles
-				for (var i = 0; i < allCurCss.length; i++)
-					for (var k = 0; k < cssPageDirs.length; k++)
-					{
-						if (allCurCss[i].substr(0, cssPageDirs[k].length) == cssPageDirs[k])
-							deletingStyles[allCurCss[i]] = null;
-					}
-
-				//Add webobjects css to deletingStyles
-				for (var i = 0; i < allCurCss.length; i++)
-					for (var k = 0; k < cssWebObjectDirs.length; k++)
-					{
-						if (allCurCss[i].substr(0, cssWebObjectDirs[k].length) == cssWebObjectDirs[k])
-							deletingStyles[allCurCss[i]] = null;
-					}
-
-				//console.log(deletingStyles);
-				return deletingStyles;
-			}
-			static getLastStyleElementOfType(styles: any, styleTypeFirstChar: string)
-			{
-				var targetKey: string = null;
-				for (var key in styles)
-				{
-					if (key.charAt(0) == styleTypeFirstChar)
-						targetKey = key;
-				}
-				if (targetKey == null)
-					return null;
-
-				return styles[targetKey];
-			}
-			static getAllCurrentCss()
-			{
-				var stylesObj: string[] = [];
-				var styles: NodeListOf<Element> = document.head.querySelectorAll("style[data-path]");
-				for (var i = 0; i < styles.length; i++)
-					stylesObj.push(styles.item(i).getAttribute("data-path"));
-				return stylesObj;
-			}
-			static getUniqueRcElementsUnderCtrlType(ctrlType: string, pageName?: string): MiscManager.RcElements
-			{
-				var rcElements: MiscManager.RcElements = {};
-
-				if (ctrlType == "app")
-				{
-					var $appElement = document.querySelector("ff-app");
-					var $layout = $appElement.querySelector("ff-layout");
-					var $pages = $appElement.querySelectorAll("ff-page");
-					var $webobjects = $appElement.querySelectorAll("[ff-webobject]");
-
-					rcElements.layout = $layout.getAttribute("ff-name");
-					rcElements.pages = {};
-					for (var i = 0; i < $pages.length; i++)
-						rcElements.pages[$pages[i].getAttribute("ff-name")] = null;
-					rcElements.webobjects = {};
-					for (var i = 0; i < $webobjects.length; i++)
-						rcElements.webobjects[$webobjects[i].getAttribute("ff-webobject")] = null;
-					return rcElements;
-				}
-				else if (ctrlType == "layout")
-				{
-					var $layoutElement = document.querySelector("ff-layout");
-					var $pages = $layoutElement.querySelectorAll("ff-page");
-					var $webobjects = $layoutElement.querySelectorAll("[ff-webobject]");
-
-					rcElements.pages = {};
-					for (var i = 0; i < $pages.length; i++)
-						rcElements.pages[$pages[i].getAttribute("ff-name")] = null;
-					rcElements.webobjects = {};
-					for (var i = 0; i < $webobjects.length; i++)
-						rcElements.webobjects[$webobjects[i].getAttribute("ff-webobject")] = null;
-				}
-				else if (ctrlType == "page")
-				{
-					if (pageName == null)
-						throw "MiscManager.getDeletingRcElements() pageName is null"
-
-					var $pageElement = document.querySelector("ff-page[ff-name='" + pageName + "']");
-
-					var $pages = $pageElement.querySelectorAll("ff-page");
-					var $webobjects = $pageElement.querySelectorAll("[ff-webobject]");
-
-					rcElements.pages = {};
-					for (var i = 0; i < $pages.length; i++)
-						rcElements.pages[$pages[i].getAttribute("ff-name")] = null;
-					rcElements.webobjects = {};
-					for (var i = 0; i < $webobjects.length; i++)
-						rcElements.webobjects[$webobjects[i].getAttribute("ff-webobject")] = null;
-				}
-				else
-					throw "MiscManager.getDeletingRcElements() ctrlType key was invalid. ctrlType was: " + ctrlType;
-
-				return rcElements;
-			}
-			static getCssFilePathDir(rcElementType: string, rcElementName?: string)
-			{
-				if (rcElementName != null)
-					rcElementName = rcElementName.toLowerCase();
-
-				if (rcElementType == "layout") 
-				{
-					//rcElementName eg "Main"
-					return "layouts/" + rcElementName;
-				}
-				else if (rcElementType == "page") 
-				{
-					//rcElementName eg "_empty" or "account._empty
-					return "pages/" + Helper.textReplaceAll(rcElementName, ".", "/"); //account/_empty
-				}
-				else if (rcElementType == "webobject")
-				{
-					//rcElementName eg "calendar" or "menus.sideMenu
-					return "webobjects/" + Helper.textReplaceAll(rcElementName, ".", "/");
-				}
-			}
-			static removeUnusuedWebObjectCss()
+			static removeUnusedWebObjectCss()
 			{
 				var webobjectNames: any = {}; //HashSet. All current webobjects present in the DOM
 				var webobjects = document.querySelectorAll("[ff-webobject]");
@@ -910,7 +817,7 @@ export namespace Engine
 				var $webobjectStyles = document.getElementById("ff-webobject-styles").children;
 				for (var i = 0; i < $webobjectStyles.length; i++)
 				{
-					var name = $webobjectStyles.item(i).getAttribute("data-webobject-name");
+					var name = $webobjectStyles.item(i).getAttribute("ff-webobject-name");
 					if (name in webobjectStyles)
 						(<Element[]>webobjectStyles[name]).push($webobjectStyles.item(i));
 					else
@@ -943,6 +850,15 @@ export namespace Engine
 		export enum State
 		{
 			Idle, Changing, Animating
+		}
+		export interface PageUpdateItems
+		{
+			appData: Items.AppData;
+			pageData: Items.PageData;
+			$title: HTMLElement;
+			$webobjectStyles: HTMLElement;
+			$newViewController: HTMLElement;
+			$replacedViewController: HTMLElement;
 		}
 	}
 	export class ScriptManager
@@ -1006,7 +922,6 @@ export namespace Engine
 	}
 	export class MiscManager
 	{
-		appVersion: number;
 		isSmoothScrollSupported: boolean;
 		hashScrollExtraSpace: number;
 		uId: number;
@@ -1017,10 +932,6 @@ export namespace Engine
 			this.hashScrollExtraSpace = 0;
 			this.uId = 0;
 		}
-		initialize(appVersion: number)
-		{
-			this.appVersion = appVersion;
-		}
 		createUId()
 		{
 			this.uId++;
@@ -1028,12 +939,12 @@ export namespace Engine
 		}
 		exitPreloaderScreen()
 		{
-			var $preloaderScreen = document.querySelector("#ff-app-preloader-screen");
+			var $preloaderScreen = document.querySelector("#ff-preloader-screen");
 			$preloaderScreen.classList.add("ff-preloader-screen-exit");
 			setTimeout(() =>
 			{
 				$preloaderScreen.remove();
-			},200);
+			}, 200);
 		}
 	}
 	export namespace MiscManager
@@ -1053,7 +964,7 @@ export namespace Engine
 			return this.$layout["ff-ref"];
 		}
 
-		pages: BasePage[];
+		pages: BasePage[]; //TODO: delete this? it doesn't seem to be deleted when changing page
 		$pages: any; //key PageName, Value: HTMLElement
 
 		unstartedLayout: BaseLayout;
@@ -1073,6 +984,40 @@ export namespace Engine
 		getFullPageClassName(pageName: string): string
 		{
 			return "Pages." + pageName + "." + pageName + "Page";
+		}
+		async getLayoutClassObject(layoutName: string)
+		{
+			let layoutNameToLower = layoutName.toLowerCase();
+			let filePath = "/layouts/" + layoutNameToLower + "/" + layoutNameToLower + "layout.js"; // /layouts/main/mainlayout.js
+			if (filePath in coreMGR.scriptMGR.loadedJs == false)
+				return null;
+			let module = await import(filePath);
+
+			let classObjName = layoutName + "Layout";
+			let classObj = module[classObjName];
+			if (classObj == null)
+				throw "File '" + filePath + "' must contain a class named '" + classObjName + "'";
+			return classObj;
+		}
+		async getPageClassObject(pageName: string)
+		{
+			//pageName is eg: account.Settings
+			var pageNameL = pageName.toLowerCase();
+			var pageNameItemsL = pageNameL.split('.');
+			var filePath = "/pages/" + pageNameItemsL.join('/') + "/" + pageNameItemsL[pageNameItemsL.length - 1] + "page.js"; // /pages/account/settings/settingspage.js
+			if (filePath in coreMGR.scriptMGR.loadedJs == false)
+				return null;
+
+			var module = await import(filePath);
+
+			let pageNameItems = pageName.split('.');
+			let classObjName = pageNameItems[pageNameItems.length - 1] + "Page"; //SettingsPage
+
+
+			let classObj = module[classObjName];
+			if (classObj == null)
+				throw "File '" + filePath + "' must contain a class named '" + classObjName + "'";
+			return classObj;
 		}
 
 		async createApp($appElement: HTMLElement)
@@ -1101,19 +1046,18 @@ export namespace Engine
 			let module = await import(src);
 			return module.app;
 		}
-		createViewControllers($parentElement: HTMLElement)
+		async createViewControllers($parentElement: HTMLElement)
 		{
 			let $layout: HTMLElement = $parentElement.tagName == "FF-LAYOUT" ? $parentElement : $parentElement.querySelector("ff-layout");
 			if ($layout != null)
 			{
 				this.$layout = $layout;
-				var fullClassName = this.getFullLayoutClassName($parentElement.getAttribute("ff-name"));
-				var classObj = Utility.getClassObjFromString(fullClassName);
-				if (classObj != null)
+				let layoutClassObj = await this.getLayoutClassObject($layout.getAttribute("ff-name")); 
+				if (layoutClassObj != null) ///If the Layout have a javascript file
 				{
-					var layout: BaseLayout = new classObj();
+					var layout: BaseLayout = new layoutClassObj();
 					if (layout instanceof BaseLayout == false)
-						throw "The Layout class " + fullClassName + " must be extended from th.BaseLayout";
+						throw "The Layout class " + $layout.getAttribute("ff-name") + " must be extended from th.BaseLayout";
 
 					this.unstartedLayout = layout;
 					layout.$element = this.$layout;
@@ -1136,7 +1080,7 @@ export namespace Engine
 				let pageName = $page.getAttribute("ff-name");
 				this.$pages[pageName] = $page;
 				let fullClassName = this.getFullPageClassName(pageName);
-				let classObj = Utility.getClassObjFromString(fullClassName);
+				let classObj = await this.getPageClassObject(pageName); //If the Page have a javascript file
 				if (classObj != null)
 				{
 					let page: BasePage = new classObj();
@@ -1327,16 +1271,6 @@ export namespace Engine
 		{
 			//console.log(layoutAndPageScrollYObjects);
 			//layoutAndPageScrollYObjects  ["_html", "_body", "_layout", "Account.Settings"]
-			function getPageByName(pageName: string)
-			{
-				for (let i = 0; i < coreMGR.viewControllerMGR.pages.length; i++)
-				{
-					var page = coreMGR.viewControllerMGR.pages[i];
-					if (page.name == pageName)
-						return page;
-				}
-				return null;
-			}
 
 			for (let key in layoutAndPageScrollYObjects)
 			{
@@ -1490,9 +1424,15 @@ export namespace Engine
 		}
 		static createPageDataObj($pageData: Element): Items.PageData
 		{
-			var jsonText = atob($pageData.getAttribute("data-x"))
+			var jsonText = atob($pageData.getAttribute("content"))
 			return JSON.parse(jsonText);
 		}
+		static createAppDataObj($appData: Element): Items.AppData
+		{
+			var jsonText = atob($appData.getAttribute("content"));
+			return JSON.parse(jsonText);
+		}
+
 		static getClassObjFromString(fullName: string): any
 		{
 			var nameItems: string[] = fullName.split(".");
@@ -1505,6 +1445,7 @@ export namespace Engine
 			}
 			return curObj;
 		}
+
 		static getBaseUrlOfUrl(url)
 		{
 			var pathArray = url.split('/');
@@ -1965,13 +1906,14 @@ export namespace Items
 	{
 		ff_appversion: number;
 		ff_scripts: ScriptItem[];
-		ff_targetfoldertype: string;
-		ff_targetfolderpagename: string;
-		ff_title: string;
-		ff_webobjectstyles: string;
 		ff_redirect: string;
 		ff_scrollyextraspace: number;
 		ff_polyfills: Polyfills;
+	}
+	export interface AppData
+	{
+		appVersion: number;
+		pageVersionApiUrl: string;
 	}
 	export interface IProgressBar
 	{

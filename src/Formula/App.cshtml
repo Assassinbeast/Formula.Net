@@ -8,6 +8,8 @@
 	<title>@Model.Context.Title</title>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta id="ff-appdata" content="@Model.Context.GetAppData()" />
+	<meta id="ff-pagedata" content="" /> @*Set through code in the framework*@
 
 	@*Make sure javascript is turned on and browser support modules*@
 	<noscript><meta http-equiv="refresh" content="0; URL=/noscript.html?redirect=@System.Web.HttpUtility.UrlEncode(Model.Context.HttpContext.Request.GetEncodedPathAndQuery())" /></noscript>
