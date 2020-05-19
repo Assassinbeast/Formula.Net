@@ -52,18 +52,11 @@ namespace Formula
 			var requestLogJson = new
 			{
 				Path = context.Request.Path,
-				ff_layout = headers.ContainsKey("ff_layout") ? (string)headers["ff_layout"] : null,
-				ff_pages = headers.ContainsKey("ff_pages") ? (string)headers["ff_pages"] : null,
-				ff_webobjects = headers.ContainsKey("ff_webobjects") ? (string)headers["ff_webobjects"] : null,
-				ff_css = headers.ContainsKey("ff_css") ? (string)headers["ff_css"] : null,
 			};
 
 			StringBuilder sb = new StringBuilder();
 			sb.AppendLine($"Request:");
 			sb.AppendLine($"Path: {context.Request.Path}");
-			sb.AppendLine($"ff_layout: {(headers.ContainsKey("ff_layout") ? (string)headers["ff_layout"] : "<NULL>")}");
-			sb.AppendLine($"ff_pages: {(headers.ContainsKey("ff_pages") ? (string)headers["ff_pages"] : "<NULL>")}");
-			sb.Append($"ff_webobjects: {(headers.ContainsKey("ff_webobjects") ? (string)headers["ff_webobjects"] : "<NULL>")}");
 
 			string x = sb.ToString();
 			logger.LogDebug(x);

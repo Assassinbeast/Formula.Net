@@ -71,6 +71,7 @@ namespace Formula
 		internal Dictionary<string, object> PageData = new Dictionary<string, object>();
 		internal string GetPageData()
 		{
+			this.Scripts.Remove("/formula/formula.js");
 			this.PageData.Add("ff_scripts", this.Scripts.Select(x=>x.Value).ToList());
 			this.PageData.Add("ff_polyfills", Utility.Polyfill.GetPolyfills(this));
 

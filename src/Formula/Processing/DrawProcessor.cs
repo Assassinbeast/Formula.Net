@@ -109,13 +109,19 @@ namespace Formula.Processing
 					context.AddScriptsFromDir(dir, false);
 				}
 			}
+			FormulaHtmlDrawer.InsertWebObjectStyles(htmlDoc.GetElementbyId("ff-webobject-styles"), drawingWebObjects);
 			#endregion
 
-			#region Finish the html text
-			FormulaHtmlDrawer.InsertWebObjectStyles(htmlDoc.GetElementbyId("ff-webobject-styles"), drawingWebObjects);
+			//Add PageData content
 			htmlDoc.GetElementbyId("ff-pagedata").Attributes["content"].Value = context.GetPageData();
+
+			//Add Scripts for preloading modules
+			FormulaHtmlDrawer.InsertPreloadModuleScripts(htmlDoc.DocumentNode.SelectSingleNode("//head"), 
+				context.Scripts.Where(x => x.Value.IsModule && x.Value.Path != "/formula/formula.js")
+				.Select(x => x.Value.Path));
+
+			//Return the final html
 			return htmlDoc.DocumentNode.OuterHtml;
-			#endregion
 
 			#endregion
 		}

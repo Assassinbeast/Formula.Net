@@ -32,7 +32,7 @@ namespace Formula.Tools
 				HtmlNode nextDrawNode = HtmlNode.CreateNode(draws[i].html);
 				ffFolder.AppendChild(nextDrawNode);
 				if (i + 1 < draws.Count)
-				{ 
+				{
 					ffFolder = nextDrawNode.Descendants("ff-folder").FirstOrDefault();
 					if (ffFolder == null)
 						throw new Exception($"The ViewController '{draws[i].type.FullName}'s ' cshtml file must have a <ff-folder> element because its not a BasePageEnd");
@@ -96,6 +96,11 @@ namespace Formula.Tools
 				foreach (string style in webobjectStyles)
 					webobjectStyleDiv.AppendChild(HtmlNode.CreateNode(style));
 			}
+		}
+		public static void InsertPreloadModuleScripts(HtmlNode head, IEnumerable<string> paths)
+		{
+			foreach (string path in paths)
+				head.AppendChild(HtmlNode.CreateNode($"<link rel='modulepreload' href='{path}'>"));
 		}
 	}
 }
