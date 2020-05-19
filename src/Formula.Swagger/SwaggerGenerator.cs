@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NSwag;
+using NSwag.CodeGeneration.CSharp;
 using NSwag.CodeGeneration.TypeScript;
 using NSwag.Generation;
 
@@ -19,12 +20,12 @@ namespace Formula.Swagger
     {
         static ILogger<SwaggerGeneratorClass> _logger;
         public class SwaggerGeneratorClass { }
-        public static async Task GenerateSwagger(this IHost host)
+        public static async Task GenerateSwagger(this IHost host, string defaultNamespace)
         {
             _logger = host.Services.GetRequiredService<ILogger<SwaggerGeneratorClass>>();
 
             await CreateSwaggerFiles(host);
-            await CreateSwaggerClients(host);
+            await CreateSwaggerClients(host, defaultNamespace);
         }
 
         static async Task CreateSwaggerFiles(IHost host)
@@ -46,28 +47,30 @@ namespace Formula.Swagger
             }
         }
 
-        static async Task CreateSwaggerClients(IHost host)
+        static async Task CreateSwaggerClients(IHost host, string defaultNamespace)
         {
             //if (Directory.Exists(Path.Combine("JsLibs", "Clients")))
             //    Directory.Delete(Path.Combine("JsLibs", "Clients"), true);
-            HashSet<string> currentClientFiles = new HashSet<string>();
+            HashSet<string> newClientFiles = new HashSet<string>();
 
             string[] swaggerDocs = Directory.GetFiles(Path.Combine("wwwroot", "swaggerdocs"));
             foreach (string swaggerDoc in swaggerDocs)
             {
                 var openApiDoc = await OpenApiDocument.FromJsonAsync(File.ReadAllText(swaggerDoc));
-                currentClientFiles.Add(await CreateSwaggerClient(openApiDoc));
+                newClientFiles.Add(await CreateTypescriptSwaggerClient(openApiDoc));
+                newClientFiles.Add(await CreateCSharpSwaggerClient(openApiDoc, defaultNamespace));
             }
 
-            HashSet<string> pastClientFiles = Directory.GetFiles(Path.Combine("JsLibs", "Clients"), "*.*", SearchOption.AllDirectories).ToHashSet();
-			foreach (string pastClientFile in pastClientFiles)
+            HashSet<string> curClientFiles = Directory.GetFiles(Path.Combine("JsLibs", "Clients"), "*.*", SearchOption.AllDirectories).ToHashSet();
+            curClientFiles.UnionWith(Directory.GetFiles(Path.Combine("Features", "Clients"), "*.*", SearchOption.AllDirectories));
+			foreach (string pastClientFile in curClientFiles)
 			{
-                if (currentClientFiles.Contains(pastClientFile) == false)
+                if (newClientFiles.Contains(pastClientFile) == false)
                     File.Delete(pastClientFile);
 			}
         }
 
-        static async Task<string> CreateSwaggerClient(OpenApiDocument openApidocument)
+        static async Task<string> CreateTypescriptSwaggerClient(OpenApiDocument openApidocument)
         {
             string name = openApidocument.Info.Title;
             var settings = new TypeScriptClientGeneratorSettings
@@ -82,6 +85,24 @@ namespace Formula.Swagger
             code = code.Replace("this.baseUrl = baseUrl ? baseUrl : \"/\";", "this.baseUrl = baseUrl ? baseUrl : \"\";");
 
             string filePath = Path.Combine("JsLibs", "Clients", $"{name}Client.ts");
+            var status = await UpsertFileIfDifferent(filePath, code);
+            _logger.LogInformation("Swagger client generation: {filePath}. Status: {status}", filePath, status);
+            return filePath;
+        }
+		static async Task<string> CreateCSharpSwaggerClient(OpenApiDocument openApidocument, string defaultNamespace)
+		{
+            string name = openApidocument.Info.Title;
+            var settings = new CSharpClientGeneratorSettings
+            {
+                ClassName = $"{name}Client",
+                CSharpGeneratorSettings =
+				{
+                    Namespace = $"{defaultNamespace}.Clients.{name}"
+                }
+            };
+            var generator = new CSharpClientGenerator(openApidocument, settings);
+            var code = generator.GenerateFile();
+            string filePath = Path.Combine("Features", "Clients", name, $"{name}Client.cs");
             var status = await UpsertFileIfDifferent(filePath, code);
             _logger.LogInformation("Swagger client generation: {filePath}. Status: {status}", filePath, status);
             return filePath;

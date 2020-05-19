@@ -87,6 +87,10 @@ namespace Formula
 			string x = JsonConvert.SerializeObject(FormulaConfig.AppData);
 			return System.Convert.ToBase64String(Encoding.UTF8.GetBytes(x));
 		}
+		public void SetPageVersion(string pageVersion)
+		{
+			this.PageData.Add("ff_pageversion", pageVersion);
+		}
 	}
 
 	internal enum FfFolderType
