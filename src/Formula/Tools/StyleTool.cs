@@ -29,6 +29,20 @@ namespace Formula.Tools
 			return styleElementStrings;
 		}
 
+		static string GetHtmlStyleValue(string systemPathWithWwwroot, string webobjectName = null)
+		{
+			string css = GetStyleStringFromFile(systemPathWithWwwroot);
+			string drawedStyle = null;
+			string urlPath = PathHelper.ToUrlPath(systemPathWithWwwroot.Substring(_wwwrootDirectory.Length));
+			if (string.IsNullOrWhiteSpace(css) == false)
+			{
+				drawedStyle = string.IsNullOrWhiteSpace(webobjectName) ?
+					$"<style ff-path='{urlPath}'>{ css }</style>" :
+					$"<style ff-path='{urlPath}' ff-webobject-name='{webobjectName}'>{ css }</style>";
+			}
+			return drawedStyle;
+		}
+
 		static string GetStyleStringFromFile(string systemPathWithWwwroot)
 		{
 			IFileInfo cssFile = FileHelper.GetFileInfo(systemPathWithWwwroot);
@@ -38,19 +52,6 @@ namespace Formula.Tools
 			using var stream = cssFile.CreateReadStream();
 			using var streamReader = new StreamReader(stream);
 			return streamReader.ReadToEnd();
-		}
-		static string GetHtmlStyleValue(string systemPathWithWwwroot, string webobjectName = null)
-		{
-			string css = GetStyleStringFromFile(systemPathWithWwwroot);
-			string drawedStyle = null;
-			string urlPath = PathHelper.ToUrlPath(systemPathWithWwwroot.Substring(_wwwrootDirectory.Length));
-			if(string.IsNullOrWhiteSpace(css) == false)
-			{
-				drawedStyle = string.IsNullOrWhiteSpace(webobjectName) ? 
-					$"<style data-path='{urlPath}'>{ css }</style>" : 
-					$"<style data-path='{urlPath}' data-webobject-name='{webobjectName}'>{ css }</style>";
-			}
-			return drawedStyle;
 		}
 	}
 }
